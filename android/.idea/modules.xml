@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/android.iml" filepath="$PROJECT_DIR$/android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/fluttertoast-3.1.3/android/fluttertoast.iml" filepath="$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/fluttertoast-3.1.3/android/fluttertoast.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libjoycon/libjoycon.iml" filepath="$PROJECT_DIR$/libjoycon/libjoycon.iml" />
+      <module fileurl="file://$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/permission_handler-4.2.0+hotfix.3/android/permission_handler.iml" filepath="$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/permission_handler-4.2.0+hotfix.3/android/permission_handler.iml" />
+      <module fileurl="file://$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/url_launcher-5.4.2/android/url_launcher.iml" filepath="$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/url_launcher-5.4.2/android/url_launcher.iml" />
+      <module fileurl="file://$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/url_launcher_macos-0.0.1+4/android/url_launcher_macos.iml" filepath="$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/url_launcher_macos-0.0.1+4/android/url_launcher_macos.iml" />
+      <module fileurl="file://$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/url_launcher_web-0.1.1+1/android/url_launcher_web.iml" filepath="$USER_HOME$/flutter/.pub-cache/hosted/pub.dartlang.org/url_launcher_web-0.1.1+1/android/url_launcher_web.iml" />
+    </modules>
+  </component>
+</project>

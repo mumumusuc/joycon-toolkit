@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="Gradle: artifacts:libjoycon:unspecified@jar">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../build/libjoycon/.transforms/7fd21deeb9ec230fee3b5648c5204981/libjoycon-release/jars/classes.jar!/" />
+      <root url="file://$PROJECT_DIR$/../build/libjoycon/.transforms/7fd21deeb9ec230fee3b5648c5204981/libjoycon-release/res" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
