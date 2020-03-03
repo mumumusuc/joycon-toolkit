@@ -2,6 +2,10 @@
 
 A new Flutter application.
 
+## Caution
+
+**This app can damage your JoyCon, use at your own risk**
+
 ## Android
 
 |   |   |   |
