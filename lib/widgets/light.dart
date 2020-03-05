@@ -3,27 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:joycon/bluetooth/controller.dart';
 import 'package:provider/provider.dart';
 
+typedef _Select = int Function(HomeLightPattern);
+typedef _Notify = void Function(_PatternNotifier, int);
+
 class LightWidget extends StatelessWidget {
-  final Map<String, HomeLightPattern> _patterns = const {
-    'breath': _breath,
-    'blink': _blink,
-  };
-  final List<int> _range_0F = List.generate(16, (i) => i);
-  final ValueNotifier<String> _pattern = ValueNotifier('breath');
+  static const List<HomeLightPattern> _patterns = const [_breath, _blink];
+  static List<int> _range_0F = List.generate(16, (i) => i);
   final ValueNotifier<int> _player = ValueNotifier(0);
   final ValueNotifier<int> _flash = ValueNotifier(0);
-  final ValueNotifier<int> _intensity = ValueNotifier(0);
-  final ValueNotifier<int> _duration = ValueNotifier(0);
-  final ValueNotifier<int> _repeat = ValueNotifier(0);
-  final _Cycle _cycles = _Cycle();
+  final Controller controller;
 
-  LightWidget({Key key}) : super(key: key);
+  LightWidget(this.controller, {Key key}) : super(key: key);
 
   Widget _buildPlayerLightCard(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(8),
       child: ListTile(
-        contentPadding: const EdgeInsets.only(left: 16),
+        //contentPadding: const EdgeInsets.only(left: 16),
         leading: const Icon(Icons.lightbulb_outline),
         title: Row(
           children: <Widget>[
@@ -39,8 +35,6 @@ class LightWidget extends StatelessWidget {
         trailing: IconButton(
           icon: Icon(Icons.send),
           onPressed: () {
-            Controller controller =
-                Provider.of<Controller>(context, listen: false);
             controller.setPlayer(_player.value, _flash.value);
           },
         ),
@@ -81,20 +75,64 @@ class LightWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildPatternSelector(
+      BuildContext context, String label, _Select select, _Notify notify) {
+    final TextStyle style = Theme.of(context).textTheme.caption;
+    return Row(
+      children: <Widget>[
+        Expanded(child: Text(label, style: style)),
+        Selector<_PatternNotifier, int>(
+          selector: (_, p) => select(p.value),
+          builder: (c, value, __) {
+            return DropdownButton<int>(
+              value: value,
+              items: _range_0F
+                  .map(
+                      (e) => DropdownMenuItem<int>(value: e, child: Text('$e')))
+                  .toList(),
+              onChanged: (v) => notify(_PatternNotifier.of(c), v),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildHomeLightRow(BuildContext context) {
     return ListTile(
       title: Row(
         children: <Widget>[
           Expanded(
-            child: _buildDropDown(context, 'intensity', _intensity, _range_0F),
+            child: _buildPatternSelector(
+              context,
+              'intensity',
+              (p) => p.intensity,
+              (n, v) {
+                n.value = n.value.copyWith(intensity: v);
+              },
+            ),
           ),
           const VerticalDivider(),
           Expanded(
-            child: _buildDropDown(context, 'duration', _duration, _range_0F),
+            child: _buildPatternSelector(
+              context,
+              'duration',
+              (p) => p.duration,
+              (n, v) {
+                n.value = n.value.copyWith(duration: v);
+              },
+            ),
           ),
           const VerticalDivider(),
           Expanded(
-            child: _buildDropDown(context, 'repeat', _repeat, _range_0F),
+            child: _buildPatternSelector(
+              context,
+              'repeat',
+              (p) => p.repeat,
+              (n, v) {
+                n.value = n.value.copyWith(repeat: v);
+              },
+            ),
           ),
         ],
       ),
@@ -102,314 +140,233 @@ class LightWidget extends StatelessWidget {
   }
 
   Widget _buildHomeLightCard(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: ExpansionPanelList.radio(
-        initialOpenPanelValue: 1,
-        expansionCallback: (index, expanded) {},
-        children: [
-          ExpansionPanelRadio(
-            value: 1,
-            canTapOnHeader: true,
-            headerBuilder: (context, expanded) {
-              return const ListTile(
-                leading: const Icon(Icons.local_parking),
-                title: const Text('Pattern'),
-              );
-            },
-            body: _buildHomeLightPreInstall(context),
-          ),
-          ExpansionPanelRadio(
-            value: 2,
-            canTapOnHeader: true,
-            headerBuilder: (context, expanded) {
-              return const ListTile(
-                leading: const Icon(Icons.radio_button_unchecked),
-                title: const Text('Custom'),
-              );
-            },
-            body: _buildHomeLightCustom(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendPreInstall(BuildContext context) {
-    Controller controller = Provider.of<Controller>(context, listen: false);
-    controller.setHomeLight(_patterns[_pattern.value]);
-  }
-
-  void _sendCustom(BuildContext context) {
-    Controller controller = Provider.of<Controller>(context, listen: false);
-    controller.setHomeLight(HomeLightPattern(
-      intensity: _intensity.value,
-      duration: _duration.value,
-      repeat: _repeat.value,
-      cycles: _cycles.toIntList(),
-    ));
-  }
-
-  Widget _buildHomeLightPreInstall(BuildContext context) {
-    return _buildDropDown(
-        context, null, _pattern, _patterns.keys.toList(growable: false));
-  }
-
-  Widget _buildHomeLightCustom(BuildContext context) {
-    return ValueListenableProvider.value(
-      value: _cycles,
-      child: Consumer<int>(builder: (context, count, _) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List<Widget>.generate(count, (index) {
-            return DecoratedBox(
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: const Color(0x0F222222)),
-                ),
-              ),
-              child: ListTile(
-                title: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: _buildDropDown<int>(
-                        context,
-                        'intensity',
-                        _cycles[index].intensity,
-                        _range_0F,
-                      ),
-                    ),
-                    const VerticalDivider(),
-                    Expanded(
-                      child: _buildDropDown<int>(
-                        context,
-                        'fade',
-                        _cycles[index].fade,
-                        _range_0F,
-                      ),
-                    ),
-                    const VerticalDivider(),
-                    Expanded(
-                      child: _buildDropDown<int>(
-                        context,
-                        'keep',
-                        _cycles[index].keep,
-                        _range_0F,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          })
-            ..insert(
-              0,
-              DecoratedBox(
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: const Color(0x0F222222)),
-                  ),
-                ),
-                child: _buildHomeLightRow(context),
-              ),
-            )
-            ..insert(
-              count + 1,
-              SizedBox(
-                height: 40,
-                width: double.infinity,
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: SizedBox.expand(
-                        child: FlatButton(
-                          child: const Icon(Icons.add),
-                          onPressed: count < 15 ? () => _cycles.append() : null,
-                        ),
-                      ),
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(
-                      child: SizedBox.expand(
-                        child: FlatButton(
-                          child: const Icon(Icons.remove),
-                          onPressed: count > 1 ? () => _cycles.remove() : null,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildHomeLightCard2(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(8),
       child: ChangeNotifierProvider(
-        create: (_) => ValueNotifier<int>(0),
-        child: Consumer<ValueNotifier<int>>(
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              border: const Border(
-                  top: const BorderSide(color: const Color(0x0F222222))),
+        create: (_) => _PatternNotifier(_patterns[0]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.radio_button_unchecked),
+              trailing: Consumer<_PatternNotifier>(
+                child: const Icon(Icons.send),
+                builder: (_, pattern, child) {
+                  return IconButton(
+                    icon: child,
+                    onPressed: () => controller.setHomeLight(pattern.value),
+                  );
+                },
+              ),
+              title: Consumer<_PatternNotifier>(
+                child: const Text('custom'),
+                builder: (_, pattern, child) {
+                  HomeLightPattern pv = pattern.value;
+                  if (!_patterns.contains(pv)) pv = null;
+                  return DropdownButton<HomeLightPattern>(
+                    value: pv,
+                    isDense: true,
+                    isExpanded: true,
+                    iconSize: 14,
+                    hint: child,
+                    items: _patterns.map((e) {
+                      return DropdownMenuItem<HomeLightPattern>(
+                        value: e,
+                        child: Text(e.name),
+                      );
+                    }).toList(),
+                    onChanged: (value) => pattern.value = value,
+                  );
+                },
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 0),
-              child: _buildHomeLightCustom(context),
-            ),
-          ),
-          builder: (_, value, child) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  contentPadding: const EdgeInsets.all(0),
-                  trailing: IconButton(
-                      icon: Icon(Icons.send),
-                      onPressed: () {
-                        if (value.value == 0)
-                          _sendPreInstall(context);
-                        else
-                          _sendCustom(context);
-                      }),
-                  title: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: RadioListTile(
-                          value: 0,
-                          groupValue: value.value,
-                          onChanged: (v) => value.value = v,
-                          title: _buildHomeLightPreInstall(context),
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile(
-                          value: 1,
-                          groupValue: value.value,
-                          onChanged: (v) => value.value = v,
-                          title: Text('custom'),
-                        ),
-                      ),
-                    ],
+            Selector<_PatternNotifier, int>(
+              selector: (_, p) => p.value.cycles.length,
+              child: _buildHomeLightRow(context),
+              builder: (context, length, child) {
+                return DecoratedBox(
+                  decoration: const BoxDecoration(
+                    border: const Border(
+                      top: const BorderSide(color: const Color(0x0F222222)),
+                    ),
                   ),
-                ),
-                Offstage(
-                  offstage: value.value == 0,
-                  child: child,
-                ),
-              ],
-            );
-          },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(
+                      length,
+                      (index) {
+                        return DecoratedBox(
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom:
+                                  BorderSide(color: const Color(0x0F222222)),
+                            ),
+                          ),
+                          child: ListTile(
+                            title: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: _buildPatternSelector(
+                                    context,
+                                    'intensity',
+                                    (p) => p.cycles[index].intensity,
+                                    (n, v) {
+                                      final c = List<HomeLightCycle>.from(
+                                          n.value.cycles);
+                                      c[index] =
+                                          c[index].copyWith(intensity: v);
+                                      n.value = n.value.copyWith(cycles: c);
+                                    },
+                                  ),
+                                ),
+                                const VerticalDivider(),
+                                Expanded(
+                                  child: _buildPatternSelector(
+                                    context,
+                                    'fade',
+                                    (p) => p.cycles[index].intensity,
+                                    (n, v) {
+                                      final c = List<HomeLightCycle>.from(
+                                          n.value.cycles);
+                                      c[index] =
+                                          c[index].copyWith(intensity: v);
+                                      n.value = n.value.copyWith(cycles: c);
+                                    },
+                                  ),
+                                ),
+                                const VerticalDivider(),
+                                Expanded(
+                                  child: _buildPatternSelector(
+                                    context,
+                                    'keep',
+                                    (p) => p.cycles[index].intensity,
+                                    (n, v) {
+                                      final c = List<HomeLightCycle>.from(
+                                          n.value.cycles);
+                                      c[index] =
+                                          c[index].copyWith(intensity: v);
+                                      n.value = n.value.copyWith(cycles: c);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                      ..insert(0, child)
+                      ..add(
+                        SizedBox(
+                          height: 40,
+                          width: double.infinity,
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: SizedBox.expand(
+                                  child: FlatButton(
+                                    child: const Icon(Icons.add),
+                                    onPressed: length < 15
+                                        ? () => _PatternNotifier.of(context)
+                                            .append()
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                              const VerticalDivider(width: 1),
+                              Expanded(
+                                child: SizedBox.expand(
+                                  child: FlatButton(
+                                    child: const Icon(Icons.remove),
+                                    onPressed: length > 1
+                                        ? () => _PatternNotifier.of(context)
+                                            .remove()
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
-/*
-    return Card(
-      margin: const EdgeInsets.all(8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(0),
-        trailing: IconButton(
-          icon: Icon(Icons.send),
-          onPressed: () {},
-        ),
-        title: ChangeNotifierProvider(
-          create: (_) => ValueNotifier<int>(0),
-          child: Consumer<ValueNotifier<int>>(
-            child: SizedBox(
-              width: double.infinity,
-              child: _buildHomeLightCustom(context),
-            ),
-            builder: (_, value, child) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: RadioListTile(
-                          value: 0,
-                          groupValue: value.value,
-                          onChanged: (v) => value.value = v,
-                          title: _buildHomeLightPreInstall(context),
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile(
-                          value: 1,
-                          groupValue: value.value,
-                          onChanged: (v) => value.value = v,
-                          title: Text('custom'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Offstage(
-                    offstage: value.value == 0,
-                    child: child,
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
- */
   }
 
   @override
   Widget build(BuildContext context) {
     print('build light widget');
-    return ListView(
-      children: <Widget>[
-        const ListTile(title: Text('Player & Flash')),
-        _buildPlayerLightCard(context),
-        const ListTile(title: Text('Home Ring')),
-        _buildHomeLightCard2(context),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const ListTile(title: Text('Player & Flash')),
+          _buildPlayerLightCard(context),
+          const ListTile(title: Text('Home Ring')),
+          _buildHomeLightCard(context),
+        ],
+      ),
     );
   }
 }
 
 const HomeLightPattern _breath = HomeLightPattern(
+  name: 'breath',
   intensity: 0x0,
   duration: 0x2,
   repeat: 0x3,
-  cycles: [0xF, 0xF, 0xF, 0x0, 0xF, 0xF],
+  cycles: [
+    HomeLightCycle(intensity: 0xF, fade: 0xF, keep: 0xF),
+    HomeLightCycle(intensity: 0x0, fade: 0xF, keep: 0xF),
+  ],
 );
 const HomeLightPattern _blink = HomeLightPattern(
+  name: 'blink',
   intensity: 0x0,
   duration: 0x2,
   repeat: 0x3,
-  cycles: [0xF, 3, 3, 0, 3, 3, 0xF, 3, 3, 0, 3, 3, 0, 0x6, 0x6],
+  cycles: [
+    HomeLightCycle(intensity: 0xF, fade: 0x3, keep: 0x3),
+    HomeLightCycle(intensity: 0x0, fade: 0x3, keep: 0x3),
+    HomeLightCycle(intensity: 0xF, fade: 0x3, keep: 0x3),
+    HomeLightCycle(intensity: 0x0, fade: 0x3, keep: 0x3),
+    HomeLightCycle(intensity: 0x0, fade: 0x6, keep: 0x6),
+  ],
 );
 
-class _Cycle extends ChangeNotifier implements ValueListenable<int> {
-  static List<_Cycle> _cycles = [_Cycle()];
-  final ValueNotifier<int> intensity = ValueNotifier(0);
-  final ValueNotifier<int> fade = ValueNotifier(0);
-  final ValueNotifier<int> keep = ValueNotifier(0);
+class _PatternNotifier extends ChangeNotifier
+    implements ValueListenable<HomeLightPattern> {
+  HomeLightPattern _value;
+
+  _PatternNotifier(HomeLightPattern pattern) : _value = pattern;
 
   @override
-  int get value => _cycles.length;
+  HomeLightPattern get value => _value;
+
+  set value(HomeLightPattern v) {
+    _value = v;
+    notifyListeners();
+  }
+
+  static _PatternNotifier of(BuildContext context) =>
+      Provider.of<_PatternNotifier>(context, listen: false);
 
   void append() {
-    _cycles.add(_Cycle());
-    notifyListeners();
+    value = value.copyWith(
+      cycles: List<HomeLightCycle>.from(_value.cycles)
+        ..add(HomeLightCycle.zero),
+    );
   }
 
   void remove() {
-    _cycles.removeLast();
-    notifyListeners();
+    value = value.copyWith(
+      cycles: List<HomeLightCycle>.from(_value.cycles)..removeLast(),
+    );
   }
-
-  _Cycle operator [](int index) => _cycles[index];
-
-  List<int> toIntList() => _cycles
-      .expand((e) => [e.intensity.value, e.fade.value, e.keep.value])
-      .toList(growable: false);
 }

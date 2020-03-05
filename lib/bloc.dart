@@ -70,6 +70,7 @@ class Bloc with BluetoothCallbackMixin {
   @override
   void onAdapterStateChanged(BluetoothState state) {
     _adapter.value = state;
+    print(state);
     if (state == BluetoothState.ENABLED) {
       _fetchDeviceState();
     }
@@ -204,13 +205,15 @@ class _BluetoothDeviceNotifier extends ChangeNotifier
 }
 
 String selectDeviceIcon(BluetoothDevice device) {
-  switch (device.name) {
-    case 'Pro Controller':
-      return 'assets/image/pro_controller.png';
-    case 'Joy-Con (L)':
-      return 'assets/image/joycon_l.png';
-    case 'Joy-Con (R)':
-      return 'assets/image/joycon_r.png';
+  switch (device.category) {
+    case DeviceCategory.ProController:
+      return 'assets/image/pro_controller_icon.png';
+    case DeviceCategory.JoyCon_L:
+      return 'assets/image/joycon_l_icon.png';
+    case DeviceCategory.JoyCon_R:
+      return 'assets/image/joycon_r_icon.png';
+    case DeviceCategory.JoyCon_Dual:
+      return 'assets/image/joycon_d_icon.png';
     default:
       throw ArgumentError.value(device.name);
   }

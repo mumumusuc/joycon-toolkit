@@ -5,7 +5,9 @@ import 'package:joycon/bluetooth/controller.dart';
 import 'package:provider/provider.dart';
 
 class DeviceWidget extends StatelessWidget {
-  const DeviceWidget({Key key}) : super(key: key);
+  final Controller controller;
+
+  const DeviceWidget(this.controller, {Key key}) : super(key: key);
 
   Widget _buildStateText(BuildContext context, String label, String value) {
     return Padding(
@@ -38,8 +40,7 @@ class DeviceWidget extends StatelessWidget {
   }
 
   Widget _buildStatusCard(BuildContext context) {
-    BluetoothDevice device =
-        Provider.of<Controller>(context, listen: false).device;
+    BluetoothDevice device = controller.device;
     return Card(
       margin: const EdgeInsets.all(8),
       child: Wrap(

@@ -25,6 +25,8 @@ enum BluetoothDeviceState {
   CONNECTED,
 }
 
+enum DeviceCategory { ProController, JoyCon_L, JoyCon_R, JoyCon_Dual }
+
 typedef _OnAdapterStateChanged = void Function(BluetoothState state);
 typedef _OnDeviceStateChanged = void Function(
     BluetoothDevice device, BluetoothDeviceState state);
@@ -65,6 +67,19 @@ class BluetoothDevice {
 
   factory BluetoothDevice.fromMap(Map<dynamic, dynamic> data) {
     return BluetoothDevice(name: data["name"], address: data["address"]);
+  }
+
+  DeviceCategory get category {
+    switch (name) {
+      case 'Pro Controller':
+        return DeviceCategory.ProController;
+      case 'Joy-Con (L)':
+        return DeviceCategory.JoyCon_L;
+      case 'Joy-Con (R)':
+        return DeviceCategory.JoyCon_R;
+      default:
+        throw ArgumentError.value(name);
+    }
   }
 
   @override

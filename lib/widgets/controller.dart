@@ -11,12 +11,28 @@ import 'package:provider/provider.dart';
 
 class ControllerWidget extends StatelessWidget {
   final BluetoothDevice device;
-  final Map<String, Widget> _slivers = {
-    'General': AliveWidgetBuilder(child: const DeviceWidget()),
-    'Rumble': AliveWidgetBuilder(child: RumbleWidget()),
-    'Light': AliveWidgetBuilder(child: LightWidget()),
-    'Color': AliveWidgetBuilder(child: const ColorWidget()),
-  };
+  final List<_WidgetHolder> _slivers = [
+    _WidgetHolder(
+      name: 'General',
+      icon: const Icon(Icons.perm_device_information),
+      builder: (c) => AliveWidgetBuilder(child: DeviceWidget(c)),
+    ),
+    _WidgetHolder(
+      name: 'Rumble',
+      icon: const Icon(Icons.vibration),
+      builder: (c) => AliveWidgetBuilder(child: RumbleWidget(c)),
+    ),
+    _WidgetHolder(
+      name: 'Light',
+      icon: const Icon(Icons.highlight),
+      builder: (c) => AliveWidgetBuilder(child: LightWidget(c)),
+    ),
+    _WidgetHolder(
+      name: 'Color',
+      icon: const Icon(Icons.color_lens),
+      builder: (c) => AliveWidgetBuilder(child: ColorWidget(c)),
+    ),
+  ];
   final ValueNotifier<int> _index = ValueNotifier(0);
   final PageController _controller = PageController();
 
@@ -54,18 +70,38 @@ class ControllerWidget extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Consumer<int>(
-          builder: (_, v, __) => Text(_slivers.keys.elementAt(v)),
+          builder: (_, v, __) => Text(_slivers[v].name),
         ),
+      ),
+      bottomNavigationBar: Consumer<int>(
+        builder: (context, index, _) {
+          return BottomNavigationBar(
+            type: BottomNavigationBarType.shifting,
+            selectedItemColor: Colors.blue,
+            unselectedItemColor: Colors.grey,
+            currentIndex: index,
+            onTap: (i) {
+              _controller.animateToPage(
+                i,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+            items: _slivers.map((e) {
+              return BottomNavigationBarItem(title: Text(e.name), icon: e.icon);
+            }).toList(),
+          );
+        },
       ),
       drawer: Drawer(
         child: ListTileTheme(
           style: ListTileStyle.drawer,
           child: ListView(
             padding: const EdgeInsets.all(0),
-            children: _slivers.entries.map<Widget>((it) {
-              final index = _slivers.keys.toList().indexOf(it.key);
+            children: _slivers.map<Widget>((it) {
+              final index = _slivers.indexOf(it);
               return Consumer<int>(
-                child: Text(it.key),
+                child: Text(it.name),
                 builder: (_, v, child) {
                   final selected = index == v;
                   return DecoratedBox(
@@ -116,11 +152,15 @@ class ControllerWidget extends StatelessWidget {
           ),
         ),
       ),
-      body: PageView(
-        controller: _controller,
-        //scrollDirection: Axis.vertical,
-        children: _slivers.values.toList(growable: false),
-        onPageChanged: (v) => _index.value = v,
+      body: Consumer<Controller>(
+        builder: (_, controller, __) {
+          return PageView(
+            controller: _controller,
+            //scrollDirection: Axis.vertical,
+            children: _slivers.map((e) => e.builder(controller)).toList(),
+            onPageChanged: (v) => _index.value = v,
+          );
+        },
       ),
     );
   }
@@ -196,6 +236,16 @@ class ControllerWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+typedef _ControllerBuilder = Widget Function(Controller);
+
+class _WidgetHolder {
+  final String name;
+  final Widget icon;
+  final _ControllerBuilder builder;
+
+  const _WidgetHolder({this.name, this.icon, this.builder});
 }
 
 class DialogRoute<T> extends PopupRoute<T> {

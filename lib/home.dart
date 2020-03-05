@@ -39,15 +39,13 @@ class _HomePageState extends State<HomePage>
     PermissionHandler()
         .checkPermissionStatus(PermissionGroup.locationWhenInUse)
         .then((permission) {
-      if (permission != PermissionStatus.granted &&
-          permission != PermissionStatus.disabled) {
+      if (permission != PermissionStatus.granted) {
         PermissionHandler().requestPermissions(
             [PermissionGroup.locationWhenInUse]).then((permissions) {
           PermissionStatus permission =
               permissions[PermissionGroup.locationWhenInUse];
           print(permission);
-          if (permission != PermissionStatus.granted &&
-              permission != PermissionStatus.disabled) {
+          if (permission != PermissionStatus.granted) {
             showDialog(
               context: context,
               barrierDismissible: true,
@@ -71,7 +69,7 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     final TextStyle textStyle = Theme.of(context).textTheme.bodyText2;
-    final String link = 'https://github.com/mumumusuc/jc-toolkit-linux';
+    final String link = 'https://github.com/mumumusuc/joycon-toolkit';
     return Scaffold(
       appBar: AppBar(
         title: Text('Joy-Con Toolkit'),
@@ -87,7 +85,7 @@ class _HomePageState extends State<HomePage>
                 context: context,
                 applicationIcon: CircleAvatar(
                   child: Image.asset(
-                    'assets/image/joycon_d.png',
+                    'assets/image/joycon_d_icon.png',
                     color: Colors.white,
                     width: 24,
                     height: 24,
@@ -103,7 +101,7 @@ class _HomePageState extends State<HomePage>
                       children: <TextSpan>[
                         TextSpan(
                             style: textStyle,
-                            text: 'Learn more about Joy-Con Toolkit at '),
+                            text: 'Learn more about Joy-Con toolkit at '),
                         TextSpan(
                           style: textStyle.copyWith(
                             color: Theme.of(context).accentColor,

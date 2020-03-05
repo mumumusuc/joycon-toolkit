@@ -28,6 +28,8 @@ class Controller {
     return Controller._(device).._create(device);
   }
 
+  DeviceCategory get category => device.category;
+
   static void _background(SendPort reply) async {
     WidgetsFlutterBinding.ensureInitialized();
     MethodChannel channel =
@@ -56,7 +58,7 @@ class Controller {
         .then((v) => v as T)
         .catchError((e) {
       Fluttertoast.showToast(
-        msg: e.message,
+        msg: '${e}',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIos: 1,
@@ -110,7 +112,9 @@ class Controller {
         'intensity': pattern.intensity,
         'duration': pattern.duration,
         'repeat': pattern.repeat,
-        'cycles': pattern.cycles,
+        'cycles': pattern.cycles
+            .expand((e) => [e.intensity, e.fade, e.keep])
+            .toList(),
       },
     );
   }
@@ -160,16 +164,61 @@ class Controller {
   }
 }
 
+class HomeLightCycle {
+  final int intensity;
+  final int fade;
+  final int keep;
+
+  const HomeLightCycle({
+    @required this.intensity,
+    @required this.fade,
+    @required this.keep,
+  });
+
+  static HomeLightCycle get zero =>
+      HomeLightCycle(intensity: 0, fade: 0, keep: 0);
+
+  HomeLightCycle copyWith({
+    int intensity,
+    int fade,
+    int keep,
+  }) {
+    return HomeLightCycle(
+      intensity: intensity ?? this.intensity,
+      fade: fade ?? this.fade,
+      keep: keep ?? this.keep,
+    );
+  }
+}
+
 class HomeLightPattern {
+  final String name;
   final int intensity;
   final int duration;
   final int repeat;
-  final List<int> cycles;
+  final List<HomeLightCycle> cycles;
 
   const HomeLightPattern({
+    this.name,
     @required this.intensity,
     @required this.duration,
     @required this.repeat,
     @required this.cycles,
   });
+
+  HomeLightPattern copyWith({
+    String name,
+    int intensity,
+    int duration,
+    int repeat,
+    List<HomeLightCycle> cycles,
+  }) {
+    return HomeLightPattern(
+      name: name ?? this.name,
+      intensity: intensity ?? this.intensity,
+      duration: duration ?? this.duration,
+      repeat: repeat ?? this.repeat,
+      cycles: cycles ?? this.cycles,
+    );
+  }
 }
