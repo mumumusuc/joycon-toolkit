@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:joycon/bluetooth/bluetooth.dart';
 import 'package:joycon/bluetooth/controller.dart';
+import 'package:joycon/option/config.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -59,6 +60,7 @@ class Bloc with BluetoothCallbackMixin {
         Provider<Bloc>(create: (_) => Bloc._(), dispose: (_, v) => v.dispose()),
         ValueListenableProvider(create: (c) => Bloc.of(c)._devices),
         ValueListenableProvider(create: (c) => Bloc.of(c)._adapter),
+        ListenableProvider.value(value: appDefaultConfig),
       ];
 
   void dispose() {

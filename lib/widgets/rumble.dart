@@ -53,11 +53,11 @@ class RumbleWidget extends StatelessWidget {
               Text(pb.current.toString().split('.')[0], style: style),
               Expanded(
                 child: Slider(
-                  label: '${pb.percent}',
+                  label: pb.percent.toStringAsPrecision(2),
                   value: pb.progress.toDouble(),
                   min: 0,
                   max: pb.total.toDouble(),
-                  divisions: pb.channel == 0 ? null : pb.channel * 4,
+                  divisions: pb.channel == 0 ? null : (pb.channel * 4),
                   onChanged: (vv) {
                     v.update(vv.toInt());
                   },

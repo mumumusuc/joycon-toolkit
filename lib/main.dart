@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:joycon/bloc.dart';
 import 'package:joycon/home.dart';
+import 'package:joycon/option/config.dart';
+import 'package:joycon/option/theme.dart';
 import 'package:joycon/widgets/color.dart';
 import 'package:joycon/widgets/controller.dart';
 import 'package:joycon/widgets/device.dart';
@@ -21,25 +23,19 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: Bloc.providers,
-      child: Builder(
-        builder: (context) {
+      child: Consumer<AppConfig>(
+        builder: (context, config, _) {
           return MaterialApp(
             title: 'JoyCon',
-            theme: ThemeData(
-              primarySwatch: Colors.blue,
-              // See https://github.com/flutter/flutter/wiki/Desktop-shells#fonts
-              fontFamily: 'GoogleSans',
-            ),
+            // See https://github.com/flutter/flutter/wiki/Desktop-shells#fonts
+            showPerformanceOverlay: config.showPerformanceOverlay,
+            checkerboardOffscreenLayers: config.showOffscreenLayersCheckerboard,
+            checkerboardRasterCacheImages:
+                config.showRasterCacheImagesCheckerboard,
+            theme: config.themeData,
+            darkTheme: appDefaultDarkTheme.data,
+            themeMode: ThemeMode.dark,
             initialRoute: '/',
-            /*
-            onGenerateInitialRoutes: (path) {
-              List<Route<dynamic>> routes = [];
-              if (path == '/') {
-                routes.add(MaterialPageRoute(builder: (_) => HomePage()));
-              }
-              return routes;
-            },
-             */
             onGenerateRoute: (settings) {
               switch (settings.name) {
                 case '/':

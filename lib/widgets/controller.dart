@@ -77,8 +77,8 @@ class ControllerWidget extends StatelessWidget {
         builder: (context, index, _) {
           return BottomNavigationBar(
             type: BottomNavigationBarType.shifting,
-            selectedItemColor: Colors.blue,
-            unselectedItemColor: Colors.grey,
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Theme.of(context).unselectedWidgetColor,
             currentIndex: index,
             onTap: (i) {
               _controller.animateToPage(
@@ -116,13 +116,6 @@ class ControllerWidget extends StatelessWidget {
                       title: child,
                       onTap: () {
                         if (!selected) {
-                          /*
-                          _controller.animateToPage(
-                            index,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                           */
                           _controller.jumpToPage(index);
                           _index.value = index;
                           Navigator.pop(context);
