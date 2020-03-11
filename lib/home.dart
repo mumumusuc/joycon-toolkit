@@ -3,12 +3,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
 import 'bloc.dart';
 import 'bluetooth/bluetooth.dart';
+import 'generated/i18n.dart';
 import 'permission.dart';
 import 'widgets/fade.dart';
 
@@ -25,14 +27,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends PermissionState<HomePage> {
   @override
   Widget build(BuildContext context) {
-    print('build home');
+    //print('build home');
     final ThemeData theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         textTheme: theme.textTheme,
         iconTheme: theme.iconTheme,
         actionsIconTheme: theme.iconTheme,
-        title: Text('Joy-Con Toolkit'),
+        title: Text(S.of(context).app_title),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -60,8 +62,18 @@ class _HomePageState extends PermissionState<HomePage> {
                 );
               },
             ),
-            permissionBanner,
-            serviceBanner,
+            buildPermissionBanner(
+              container: (child) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[const Divider(height: 3), child],
+              ),
+            ),
+            buildServiceBanner(
+              container: (child) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[const Divider(height: 3), child],
+              ),
+            ),
             const Divider(),
             Selector<BluetoothDeviceMap, int>(
               selector: (context, map) => map.devices.length,
@@ -124,10 +136,10 @@ class _HomePageState extends PermissionState<HomePage> {
         top: 16,
         bottom: 16,
       ),
-      content: Text('Enable bluetooth'),
+      content: Text(S.of(context).perm_bluetooth),
       actions: [
         FlatButton(
-          child: Text('OK'),
+          child: Text(S.of(context).action_ok),
           onPressed: () => Bloc.of(context).bluetooth.enable(true),
         ),
       ],
@@ -143,8 +155,8 @@ class _HomePageState extends PermissionState<HomePage> {
           child: Image.asset('assets/image/icon.png'),
         ),
       ),
-      applicationName: 'Joy-Con Toolkit',
-      applicationVersion: '0.0.1 Feb 2020',
+      applicationName: S.of(context).app_title,
+      applicationVersion: '0.0.2 Feb 2020',
       applicationLegalese: '© 2020 mumumusuc',
       children: [
         SizedBox(height: 24),
@@ -152,8 +164,9 @@ class _HomePageState extends PermissionState<HomePage> {
           text: TextSpan(
             children: <TextSpan>[
               TextSpan(
-                  style: textStyle,
-                  text: 'Learn more about Joy-Con toolkit at '),
+                style: textStyle,
+                text: S.of(context).about_desc,
+              ),
               TextSpan(
                 style: textStyle.copyWith(
                   color: Colors.blue,
@@ -198,7 +211,7 @@ class _ListWidget extends StatelessWidget {
               semanticsLabel: 'empty',
             ),
             Text(
-              'no device found',
+              S.of(context).no_device,
               style: Theme.of(context).textTheme.caption,
             ),
           ],
@@ -367,18 +380,18 @@ class _DeviceCardState extends State<_DeviceCard>
     return SizedOverflowBox(size: const Size(24, 24), child: w);
   }
 
-  String _getStateString(BluetoothDeviceState state) {
+  String _getStateString(BuildContext context, BluetoothDeviceState state) {
     switch (state) {
       case BluetoothDeviceState.PAIRING:
-        return 'Pairing';
+        return S.of(context).device_state_pairing;
       case BluetoothDeviceState.PAIRED:
-        return 'Paired';
+        return S.of(context).device_state_paired;
       case BluetoothDeviceState.CONNECTING:
-        return 'Connecting';
+        return S.of(context).device_state_connecting;
       case BluetoothDeviceState.DISCONNECTING:
-        return 'Disconnecting';
+        return S.of(context).device_state_disconnecting;
       case BluetoothDeviceState.CONNECTED:
-        return 'Connected';
+        return S.of(context).device_state_connected;
       default:
         return '';
     }
@@ -389,8 +402,6 @@ class _DeviceCardState extends State<_DeviceCard>
     _controller = AnimationController(vsync: this, duration: _kDuration);
     _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _colorTween = ColorTween();
-    _thisState = _lastState = Text(_getStateString(state));
-    _thisTailing = _lastTailing = _getStateTrailing(state);
     super.initState();
   }
 
@@ -405,8 +416,8 @@ class _DeviceCardState extends State<_DeviceCard>
     if (widget.meta != oldWidget.meta) {
       _lastTailing = _getStateTrailing(oldWidget.meta.state);
       _thisTailing = _getStateTrailing(state);
-      _lastState = Text(_getStateString(oldWidget.meta.state));
-      _thisState = Text(_getStateString(state));
+      _lastState = Text(_getStateString(context, oldWidget.meta.state));
+      _thisState = Text(_getStateString(context, state));
       _colorTween.begin = _getStateColor(context, oldWidget.meta.state);
       _colorTween.end = _getStateColor(context, state);
       _controller.reset();
@@ -418,10 +429,17 @@ class _DeviceCardState extends State<_DeviceCard>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_controller.isDismissed)
-      _colorTween.begin = _getStateColor(context, state);
-    else if (_controller.isCompleted)
-      _colorTween.end = _getStateColor(context, state);
+    switch (_controller.status) {
+      case AnimationStatus.dismissed:
+      case AnimationStatus.reverse:
+        _colorTween.begin = _getStateColor(context, state);
+        break;
+      default:
+        _colorTween.end = _getStateColor(context, state);
+        break;
+    }
+    _thisState ??= _lastState ??= Text(_getStateString(context, state));
+    _thisTailing ??= _lastTailing ??= _getStateTrailing(state);
   }
 
   @override

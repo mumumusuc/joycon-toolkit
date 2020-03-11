@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
-import 'package:joycon/bloc.dart';
-import 'package:joycon/home.dart';
-import 'package:joycon/option/config.dart';
-import 'package:joycon/widgets/controller.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'bloc.dart';
+import 'home.dart';
+import 'option/config.dart';
+import 'widgets/controller.dart';
+
+import 'generated/i18n.dart';
 
 void main() {
   // See https://github.com/flutter/flutter/wiki/Desktop-shells#target-platform-override
@@ -18,15 +21,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('build root app');
     return MultiProvider(
       providers: Bloc.providers,
       child: Consumer<AppConfig>(
         builder: (context, config, _) {
-          print('app config changed');
+          // See https://github.com/flutter/flutter/wiki/Desktop-shells#fonts
           return MaterialApp(
-            title: 'JoyCon',
-            // See https://github.com/flutter/flutter/wiki/Desktop-shells#fonts
+            onGenerateTitle: (context) => S.of(context).title,
             showPerformanceOverlay: config.showPerformanceOverlay,
             checkerboardOffscreenLayers: config.showOffscreenLayersCheckerboard,
             checkerboardRasterCacheImages:
@@ -34,6 +35,16 @@ class MyApp extends StatelessWidget {
             theme: config.lightTheme,
             darkTheme: config.darkTheme,
             themeMode: ThemeMode.system,
+            locale: Locale('zh', ''),
+            localizationsDelegates: [
+              S.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: S.delegate.supportedLocales,
+            localeResolutionCallback:
+                S.delegate.resolution(fallback: Locale('zh', '')),
             initialRoute: '/',
             onGenerateInitialRoutes: (p) => [
               MaterialPageRoute(
@@ -54,7 +65,6 @@ class MyApp extends StatelessWidget {
               }
               return null;
             },
-
             builder: (context, child) {
               return Scaffold(body: SafeArea(child: child));
             },

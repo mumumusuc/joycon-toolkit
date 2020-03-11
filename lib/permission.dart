@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:android_intent/android_intent.dart';
+import 'generated/i18n.dart';
 import 'widgets/fade.dart';
 import 'dart:io';
 
@@ -150,6 +151,8 @@ class _ServiceStatus extends ChangeNotifier implements ValueListenable<bool> {
   void request() => _requestLocationService();
 }
 
+typedef ContainerBuilder = Widget Function(Widget);
+
 abstract class PermissionState<T extends StatefulWidget> extends State<T>
     with WidgetsBindingObserver {
   final _PermissionStatus _permission = _PermissionStatus();
@@ -197,11 +200,11 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
         );
       });
 
-  Widget get permissionBanner {
+  Widget buildPermissionBanner({ContainerBuilder container}) {
     return ValueListenableProvider.value(
       value: _permission,
       child: Consumer<bool>(
-        child: _permissionBannerWidget,
+        child: container?.call(_permissionBanner) ?? _permissionBanner,
         builder: (context, abnormal, child) {
           return FadeWidget(
             fade: !abnormal,
@@ -212,11 +215,11 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
     );
   }
 
-  Widget get serviceBanner {
+  Widget buildServiceBanner({ContainerBuilder container}) {
     return ValueListenableProvider.value(
       value: _service,
       child: Consumer<bool>(
-        child: _serviceBannerWidget,
+        child: container?.call(_serviceBanner) ?? _serviceBanner,
         builder: (context, abnormal, child) {
           return FadeWidget(
             fade: !abnormal,
@@ -233,7 +236,7 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
         decoration: TextDecoration.underline,
       );
 
-  Widget get _permissionBannerWidget {
+  Widget get _permissionBanner {
     return MaterialBanner(
       leading: const CircleAvatar(
         child: const Icon(Icons.launch),
@@ -245,7 +248,7 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
       ),
       content: Text.rich(
         TextSpan(
-          text: 'Android 10 (or higher) need ',
+          text: S.of(context).perm_permission_1,
           children: [
             TextSpan(
                 text: 'ACCESS_FINE_LOCATION',
@@ -254,24 +257,24 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
                   ..onTap = () async {
                     if (await canLaunch(_permissionUrl)) launch(_permissionUrl);
                   }),
-            TextSpan(text: ' permission to start bluetooth discovery.'),
+            TextSpan(text: S.of(context).perm_permission_2),
           ],
         ),
       ),
       actions: [
         FlatButton(
-          child: Text('OK'),
+          child: Text(S.of(context).action_ok),
           onPressed: _permission.request,
         ),
         FlatButton(
-          child: Text('DISMISS'),
+          child: Text(S.of(context).action_dismiss),
           onPressed: () => ignorePermission(true),
         ),
       ],
     );
   }
 
-  Widget get _serviceBannerWidget {
+  Widget get _serviceBanner {
     return MaterialBanner(
       leading: const CircleAvatar(
         child: const Icon(Icons.location_on),
@@ -283,27 +286,27 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
       ),
       content: Text.rich(
         TextSpan(
-          text: 'Android 10 (or higher) need  ',
+          text: S.of(context).perm_service_1,
           children: [
             TextSpan(
-              text: 'ENABLE LOCATION',
+              text: S.of(context).perm_service_2,
               style: _hyperLinkTextStyle,
               recognizer: TapGestureRecognizer()
                 ..onTap = () async {
                   if (await canLaunch(_locationUrl)) launch(_locationUrl);
                 },
             ),
-            TextSpan(text: ' to start bluetooth discovery'),
+            TextSpan(text: S.of(context).perm_service_3),
           ],
         ),
       ),
       actions: [
         FlatButton(
-          child: Text('OK'),
+          child: Text(S.of(context).action_ok),
           onPressed: _service.request,
         ),
         FlatButton(
-          child: Text('DISMISS'),
+          child: Text(S.of(context).action_dismiss),
           onPressed: () => ignoreService(true),
         ),
       ],

@@ -226,3 +226,8 @@ String selectDeviceIcon(BluetoothDevice device) {
       throw ArgumentError.value(device.name);
   }
 }
+
+//
+const Color dividerColor = const Color(0x07444444);
+const BorderSide dividerBorderSide =
+    const BorderSide(color: dividerColor, width: 0);

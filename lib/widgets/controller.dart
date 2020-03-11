@@ -1,34 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:joycon/bloc.dart';
-import 'package:joycon/bluetooth/bluetooth.dart';
-import 'package:joycon/bluetooth/controller.dart';
-import 'package:joycon/widgets/color.dart';
-import 'package:joycon/widgets/device.dart';
-import 'package:joycon/widgets/light.dart';
-import 'package:joycon/widgets/rumble.dart';
 import 'package:provider/provider.dart';
+import '../bloc.dart';
+import '../bluetooth/bluetooth.dart';
+import '../bluetooth/controller.dart';
+import '../generated/i18n.dart';
+import '../widgets/color.dart';
+import '../widgets/device.dart';
+import '../widgets/light.dart';
+import '../widgets/rumble.dart';
 
 class ControllerWidget extends StatelessWidget {
   final BluetoothDevice device;
   final List<_WidgetHolder> _slivers = [
     _WidgetHolder(
-      name: 'General',
+      nameBuilder: (c) => S.of(c).bottom_label_general,
       icon: const Icon(Icons.perm_device_information),
       builder: (c) => DeviceWidget(c),
     ),
     _WidgetHolder(
-      name: 'Rumble',
+      nameBuilder: (c) => S.of(c).bottom_label_rumble,
       icon: const Icon(Icons.vibration),
       builder: (c) => RumbleWidget(c),
     ),
     _WidgetHolder(
-      name: 'Light',
+      nameBuilder: (c) => S.of(c).bottom_label_light,
       icon: const Icon(Icons.highlight),
       builder: (c) => LightWidget(c),
     ),
     _WidgetHolder(
-      name: 'Color',
+      nameBuilder: (c) => S.of(c).bottom_label_color,
       icon: const Icon(Icons.color_lens),
       builder: (c) => ColorWidget(c),
     ),
@@ -66,7 +67,8 @@ class ControllerWidget extends StatelessWidget {
   }
 
   Widget _build(BuildContext context) {
-    print('build controller body');
+    //print('build controller body');
+    final ThemeData theme = Theme.of(context);
     return Scaffold(
       bottomNavigationBar: BottomAppBar(
         shape: CircularNotchedRectangle(),
@@ -74,7 +76,7 @@ class ControllerWidget extends StatelessWidget {
         child: Consumer<int>(
           builder: (context, index, _) {
             return BottomNavigationBar(
-              selectedItemColor: Theme.of(context).primaryColorLight,
+              selectedItemColor: Theme.of(context).primaryColor,
               unselectedItemColor: Theme.of(context).unselectedWidgetColor,
               currentIndex: index,
               onTap: (i) {
@@ -86,7 +88,7 @@ class ControllerWidget extends StatelessWidget {
               },
               items: _slivers.map((e) {
                 return BottomNavigationBarItem(
-                  title: Text(e.name),
+                  title: Text(e.getName(context)),
                   icon: e.icon,
                 );
               }).toList(),
@@ -106,6 +108,7 @@ class ControllerWidget extends StatelessWidget {
               title: Text(device.name),
               centerTitle: true,
               floating: true,
+              snap: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.pop(context),
@@ -156,31 +159,24 @@ class ControllerWidget extends StatelessWidget {
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Text(
-                                  '${device.name}(${device.address}) disconnected',
+                                  S.of(context).dialog_desc_disconnected(
+                                      '${device.name}(${device.address})'),
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context).textTheme.subtitle1,
                                 ),
                               ),
                             ),
                           ),
+                          const Divider(height: 3),
                           SizedBox(
                             height: 48,
-                            child: DecoratedBox(
-                              decoration: const BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                    color: const Color(0x0F222222),
-                                  ),
-                                ),
-                              ),
-                              child: FlatButton(
-                                textColor: Theme.of(context).primaryColor,
-                                child: Text('OK'),
-                                onPressed: () {
-                                  Navigator.popUntil(
-                                      context, ModalRoute.withName('/'));
-                                },
-                              ),
+                            child: FlatButton(
+                              textColor: Theme.of(context).primaryColor,
+                              child: Text(S.of(context).action_ok),
+                              onPressed: () {
+                                Navigator.popUntil(
+                                    context, ModalRoute.withName('/'));
+                              },
                             ),
                           ),
                         ],
@@ -207,13 +203,23 @@ class ControllerWidget extends StatelessWidget {
 }
 
 typedef _ControllerBuilder = Widget Function(Controller);
+typedef _NameBuilder = String Function(BuildContext);
 
 class _WidgetHolder {
-  final String name;
+  final String _name;
   final Widget icon;
+  final _NameBuilder _nameBuilder;
   final _ControllerBuilder builder;
 
-  const _WidgetHolder({this.name, this.icon, this.builder});
+  const _WidgetHolder(
+      {String name, _NameBuilder nameBuilder, this.icon, this.builder})
+      : assert(name != null || nameBuilder != null),
+        assert(icon != null),
+        assert(builder != null),
+        _name = name,
+        _nameBuilder = nameBuilder;
+
+  String getName(BuildContext context) => _name ?? _nameBuilder(context);
 }
 
 class DialogRoute<T> extends PopupRoute<T> {

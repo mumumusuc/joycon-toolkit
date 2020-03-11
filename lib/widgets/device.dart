@@ -70,7 +70,7 @@ class DeviceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('build device widget');
+    //print('build device widget');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
