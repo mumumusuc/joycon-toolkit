@@ -173,33 +173,31 @@ class RumbleWidget extends StatelessWidget {
       ),
     ];
 
-    return SingleChildScrollView(
-      child: Card(
-        margin: const EdgeInsets.all(8),
-        child: MultiProvider(
-          providers: [
-            ListenableProvider(
-              create: (_) => ValueNotifier<String>(_musics[0]),
-              dispose: (_, v) => v.dispose(),
-            ),
-            ListenableProvider(
-              create: (_) => ValueNotifier<Timer>(null),
-              dispose: (_, v) {
-                v.value?.cancel();
-                v.dispose();
-              },
-            ),
-            ListenableProvider(
-              create: (_) => _PlaybackNotifier(_Playback.zero),
-              dispose: (_, v) => v.dispose(),
-            ),
-          ],
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: children,
-            ),
+    return Card(
+      margin: const EdgeInsets.all(8),
+      child: MultiProvider(
+        providers: [
+          ListenableProvider(
+            create: (_) => ValueNotifier<String>(_musics[0]),
+            dispose: (_, v) => v.dispose(),
+          ),
+          ListenableProvider(
+            create: (_) => ValueNotifier<Timer>(null),
+            dispose: (_, v) {
+              v.value?.cancel();
+              v.dispose();
+            },
+          ),
+          ListenableProvider(
+            create: (_) => _PlaybackNotifier(_Playback.zero),
+            dispose: (_, v) => v.dispose(),
+          ),
+        ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: children,
           ),
         ),
       ),

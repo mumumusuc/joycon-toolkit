@@ -1,78 +1,41 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:joycon/bloc.dart';
-import 'package:joycon/bluetooth/bluetooth.dart';
-import 'package:joycon/permission.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
+import 'bloc.dart';
+import 'bluetooth/bluetooth.dart';
+import 'permission.dart';
+import 'widgets/fade.dart';
+
+const Duration _kDuration = const Duration(milliseconds: 300);
+const String _githubUrl = 'https://github.com/mumumusuc/joycon-toolkit';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key key}) : super(key: key);
+  const HomePage();
 
   @override
-  _HomePageState createState() => _HomePageState();
+  State<StatefulWidget> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> _animation;
-  final Duration _duration = const Duration(seconds: 1);
-
-  void waitBeg() {
-    if (!_controller.isAnimating) _controller.repeat();
-  }
-
-  void waitEnd() {
-    if (_controller.isAnimating) _controller.animateTo(1.0);
-  }
-
-  @override
-  void initState() {
-    _controller = AnimationController(vsync: this, duration: _duration);
-    _animation = Tween<double>(begin: 0, end: 2 * pi).animate(_controller);
-    PermissionHandler()
-        .checkPermissionStatus(PermissionGroup.locationWhenInUse)
-        .then((permission) {
-      if (permission != PermissionStatus.granted) {
-        PermissionHandler().requestPermissions(
-            [PermissionGroup.locationWhenInUse]).then((permissions) {
-          PermissionStatus permission =
-              permissions[PermissionGroup.locationWhenInUse];
-          print(permission);
-          if (permission != PermissionStatus.granted) {
-            showDialog(
-              context: context,
-              barrierDismissible: true,
-              useRootNavigator: true,
-              builder: (context) => Center(
-                child: Permission(),
-              ),
-            );
-          }
-        });
-      }
-    });
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
+class _HomePageState extends PermissionState<HomePage> {
   @override
   Widget build(BuildContext context) {
-    final TextStyle textStyle = Theme.of(context).textTheme.bodyText2;
-    final String link = 'https://github.com/mumumusuc/joycon-toolkit';
+    print('build home');
+    final ThemeData theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
+        textTheme: theme.textTheme,
+        iconTheme: theme.iconTheme,
+        actionsIconTheme: theme.iconTheme,
         title: Text('Joy-Con Toolkit'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () => SystemNavigator.pop(animated: true),
@@ -80,99 +43,264 @@ class _HomePageState extends State<HomePage>
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.more_vert),
-            onPressed: () {
-              showAboutDialog(
-                context: context,
-                applicationIcon: CircleAvatar(
-                  child: Image.asset(
-                    'assets/image/joycon_d_icon.png',
-                    color: Colors.white,
-                    width: 24,
-                    height: 24,
-                  ),
-                ),
-                applicationName: 'Joy-Con Toolkit',
-                applicationVersion: '0.0.1 Feb 2020',
-                applicationLegalese: '© 2020 mumumusuc',
-                children: [
-                  SizedBox(height: 24),
-                  RichText(
-                    text: TextSpan(
-                      children: <TextSpan>[
-                        TextSpan(
-                            style: textStyle,
-                            text: 'Learn more about Joy-Con toolkit at '),
-                        TextSpan(
-                          style: textStyle.copyWith(
-                            color: Theme.of(context).accentColor,
-                          ),
-                          text: link,
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              if (await canLaunch(link)) {
-                                launch(link);
-                              }
-                            },
-                        ),
-                        TextSpan(style: textStyle, text: '.'),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
+            onPressed: () => _buildAboutDialog(context),
           ),
         ],
       ),
-      body: Selector<BluetoothDeviceMap, int>(
-        selector: (context, map) => map.devices.length,
-        builder: (context, length, child) {
-          if (length == 0)
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/image/empty.svg',
-                    semanticsLabel: 'empty',
-                  ),
-                  Text(
-                    'No device found',
-                    style: Theme.of(context).textTheme.subtitle1,
-                  ),
-                ],
-              ),
-            );
-          return ListView(
-            primary: true,
-            padding: const EdgeInsets.all(8),
-            children: BluetoothDeviceMap.of(context).devices.map((it) {
-              return Selector<BluetoothDeviceMap, BluetoothDeviceMeta>(
-                selector: (context, map) => map[it.key],
-                builder: (context, meta, child) {
-                  return _DeviceCard(it.key, meta);
+      body: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Selector<BluetoothState, bool>(
+              selector: (_, s) => s != BluetoothState.DISABLED,
+              builder: (context, hide, child) {
+                return FadeWidget(
+                  fade: hide,
+                  child: _buildBluetoothBanner(context),
+                );
+              },
+            ),
+            permissionBanner,
+            serviceBanner,
+            const Divider(),
+            Selector<BluetoothDeviceMap, int>(
+              selector: (context, map) => map.devices.length,
+              builder: (context, length, child) {
+                return _ListWidget(
+                  children: length == 0
+                      ? null
+                      : BluetoothDeviceMap.of(context)
+                          .devices
+                          .map<Widget>((it) {
+                          return Selector<BluetoothDeviceMap,
+                              BluetoothDeviceMeta>(
+                            selector: (context, map) => map[it.key],
+                            builder: (context, meta, child) {
+                              return _DeviceCard(it.key, meta);
+                            },
+                          );
+                        }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: Consumer<BluetoothState>(
+        builder: (context, state, child) {
+          print(state);
+          switch (state) {
+            case BluetoothState.DISABLED:
+              return _DiscoveryWidget(false);
+            case BluetoothState.DISCOVER_ON:
+              return _DiscoveryWidget(
+                true,
+                onPressed: () => Bloc.of(context).bluetooth.discovery(false),
+              );
+            case BluetoothState.ENABLED:
+            case BluetoothState.TURNING_ON:
+            case BluetoothState.DISCOVER_OFF:
+            default:
+              return _DiscoveryWidget(
+                false,
+                onPressed: () async {
+                  if (await isPermissionReady(showBanner: true))
+                    Bloc.of(context).bluetooth.discovery(true);
                 },
               );
-            }).toList(growable: false),
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildBluetoothBanner(BuildContext context) {
+    return MaterialBanner(
+      leading: const CircleAvatar(
+        child: const Icon(Icons.bluetooth),
+      ),
+      leadingPadding: const EdgeInsets.only(
+        right: 16,
+        top: 16,
+        bottom: 16,
+      ),
+      content: Text('Enable bluetooth'),
+      actions: [
+        FlatButton(
+          child: Text('OK'),
+          onPressed: () => Bloc.of(context).bluetooth.enable(true),
+        ),
+      ],
+    );
+  }
+
+  void _buildAboutDialog(BuildContext context) {
+    final TextStyle textStyle = Theme.of(context).textTheme.bodyText2;
+    showAboutDialog(
+      context: context,
+      applicationIcon: ClipOval(
+        child: CircleAvatar(
+          child: Image.asset('assets/image/icon.png'),
+        ),
+      ),
+      applicationName: 'Joy-Con Toolkit',
+      applicationVersion: '0.0.1 Feb 2020',
+      applicationLegalese: '© 2020 mumumusuc',
+      children: [
+        SizedBox(height: 24),
+        RichText(
+          text: TextSpan(
+            children: <TextSpan>[
+              TextSpan(
+                  style: textStyle,
+                  text: 'Learn more about Joy-Con toolkit at '),
+              TextSpan(
+                style: textStyle.copyWith(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                  fontStyle: FontStyle.italic,
+                ),
+                text: _githubUrl,
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () async {
+                    if (await canLaunch(_githubUrl)) {
+                      launch(_githubUrl);
+                    }
+                  },
+              ),
+              TextSpan(style: textStyle, text: '.'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ListWidget extends StatelessWidget {
+  final List<Widget> children;
+
+  const _ListWidget({@required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+      child: AnimatedCrossFade(
+        firstCurve: Curves.easeInOut,
+        secondCurve: Curves.easeInOut,
+        sizeCurve: Curves.easeInOut,
+        firstChild: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              'assets/image/empty.svg',
+              semanticsLabel: 'empty',
+            ),
+            Text(
+              'no device found',
+              style: Theme.of(context).textTheme.caption,
+            ),
+          ],
+        ),
+        secondChild: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: children ?? [],
+        ),
+        crossFadeState: children?.isNotEmpty == true
+            ? CrossFadeState.showSecond
+            : CrossFadeState.showFirst,
+        duration: _kDuration,
+        layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+          return Stack(
+            overflow: Overflow.visible,
+            alignment: AlignmentDirectional.topCenter,
+            children: <Widget>[
+              bottomChild,
+              topChild,
+            ],
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Bloc.of(context).bluetooth.discovery(true),
+    );
+  }
+}
+
+class _DiscoveryWidget extends StatefulWidget {
+  final bool discovering;
+  final VoidCallback onPressed;
+
+  const _DiscoveryWidget(this.discovering, {this.onPressed});
+
+  bool get disabled => onPressed == null;
+
+  @override
+  State<StatefulWidget> createState() => _DiscoveryWidgetState();
+}
+
+class _DiscoveryWidgetState extends State<_DiscoveryWidget>
+    with TickerProviderStateMixin {
+  AnimationController _rotate;
+  AnimationController _scale;
+
+  bool get discovering => widget.discovering;
+
+  bool get disabled => widget.disabled;
+
+  @override
+  void initState() {
+    _rotate = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    _scale = AnimationController(vsync: this, duration: _kDuration);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _rotate.dispose();
+    _scale.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: Tween(begin: 1.0, end: 0.0)
+          .animate(CurvedAnimation(parent: _scale, curve: Curves.easeInOut)),
+      child: FloatingActionButton(
         tooltip: 'discovery',
         child: AnimatedBuilder(
-          animation: _animation,
           child: const Icon(Icons.refresh),
+          animation: _rotate,
           builder: (context, child) {
-            final BluetoothState state = Provider.of<BluetoothState>(context);
-            if (state == BluetoothState.DISCOVER_ON)
-              waitBeg();
-            else if (state == BluetoothState.DISCOVER_OFF) waitEnd();
-            return Transform.rotate(angle: _animation.value, child: child);
+            return Transform.rotate(
+              angle: 2 * pi * _rotate.value,
+              child: child,
+            );
           },
         ),
+        onPressed: widget.onPressed,
       ),
     );
+  }
+
+  @override
+  void didUpdateWidget(_DiscoveryWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.discovering != discovering) {
+      if (discovering)
+        _rotate.repeat();
+      else
+        _rotate.animateTo(1);
+    }
+    if (oldWidget.disabled != disabled) {
+      if (disabled)
+        _scale.forward();
+      else
+        _scale.reverse();
+    }
   }
 }
 
@@ -200,33 +328,33 @@ class _DeviceCardState extends State<_DeviceCard>
 
   BluetoothDeviceState get state => widget.meta.state;
 
-  Color _getStateColor(BluetoothDeviceState state) {
+  Color _getStateColor(BuildContext context, BluetoothDeviceState state) {
+    if (context == null) return null;
     switch (state) {
       case BluetoothDeviceState.CONNECTED:
-        return Colors.lightGreen;
       case BluetoothDeviceState.CONNECTING:
-      case BluetoothDeviceState.DISCONNECTED:
-      case BluetoothDeviceState.PAIRED:
-        return Colors.limeAccent;
+      case BluetoothDeviceState.DISCONNECTING:
+        return Theme.of(context).colorScheme.primary;
       default:
-        return Colors.transparent;
+        return Theme.of(context).cardColor;
     }
   }
 
-  Widget _getStateTailing(BluetoothDeviceState state) {
+  Widget _getStateTrailing(BluetoothDeviceState state) {
     Widget w = SizedBox();
     switch (state) {
       case BluetoothDeviceState.CONNECTED:
         w = IconButton(
-          icon: Icon(Icons.close),
+          icon: const Icon(Icons.close),
           onPressed: () => Bloc.of(context).bluetooth.connect(device, false),
         );
         break;
       case BluetoothDeviceState.PAIRED:
-        w = const Icon(Icons.bluetooth_disabled);
+        w = const Icon(Icons.bluetooth_connected);
         break;
       case BluetoothDeviceState.PAIRING:
       case BluetoothDeviceState.CONNECTING:
+      case BluetoothDeviceState.DISCONNECTING:
         w = const SizedBox(
           width: 20,
           height: 20,
@@ -247,6 +375,8 @@ class _DeviceCardState extends State<_DeviceCard>
         return 'Paired';
       case BluetoothDeviceState.CONNECTING:
         return 'Connecting';
+      case BluetoothDeviceState.DISCONNECTING:
+        return 'Disconnecting';
       case BluetoothDeviceState.CONNECTED:
         return 'Connected';
       default:
@@ -256,12 +386,11 @@ class _DeviceCardState extends State<_DeviceCard>
 
   @override
   void initState() {
-    final Duration duration = const Duration(milliseconds: 350);
-    _controller = AnimationController(vsync: this, duration: duration);
+    _controller = AnimationController(vsync: this, duration: _kDuration);
     _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    _colorTween = ColorTween(begin: _getStateColor(state));
+    _colorTween = ColorTween();
     _thisState = _lastState = Text(_getStateString(state));
-    _thisTailing = _lastTailing = _getStateTailing(state);
+    _thisTailing = _lastTailing = _getStateTrailing(state);
     super.initState();
   }
 
@@ -274,12 +403,12 @@ class _DeviceCardState extends State<_DeviceCard>
   @override
   void didUpdateWidget(_DeviceCard oldWidget) {
     if (widget.meta != oldWidget.meta) {
-      _lastTailing = _getStateTailing(oldWidget.meta.state);
-      _thisTailing = _getStateTailing(state);
+      _lastTailing = _getStateTrailing(oldWidget.meta.state);
+      _thisTailing = _getStateTrailing(state);
       _lastState = Text(_getStateString(oldWidget.meta.state));
       _thisState = Text(_getStateString(state));
-      _colorTween.begin = _getStateColor(oldWidget.meta.state);
-      _colorTween.end = _getStateColor(state);
+      _colorTween.begin = _getStateColor(context, oldWidget.meta.state);
+      _colorTween.end = _getStateColor(context, state);
       _controller.reset();
       _controller.forward();
     }
@@ -287,96 +416,105 @@ class _DeviceCardState extends State<_DeviceCard>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller.isDismissed)
+      _colorTween.begin = _getStateColor(context, state);
+    else if (_controller.isCompleted)
+      _colorTween.end = _getStateColor(context, state);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return LimitedBox(
-      maxHeight: 80,
-      child: Card(
-        clipBehavior: Clip.hardEdge,
+    final ThemeData theme = Theme.of(context);
+    final Color contentColor =
+        widget.meta.state == BluetoothDeviceState.CONNECTED
+            ? theme.colorScheme.onPrimary
+            : null;
+    _colorTween.begin ??= _getStateColor(context, state);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: LimitedBox(
+        maxHeight: 80,
         child: AnimatedBuilder(
           animation: _controller,
-          builder: (_, child) {
-            final Color color = _colorTween.evaluate(_curve);
-            return DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: const Alignment(0.5, 0),
-                  colors: [
-                    color == Colors.transparent
-                        ? color
-                        : Theme.of(context).cardColor,
-                    color,
-                  ],
+          child: AnimatedBuilder(
+            animation: _controller,
+            child: Text(device.address),
+            builder: (_, child) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                const SizedBox(
+                  height: 12,
+                  child: const VerticalDivider(),
                 ),
-              ),
-              child: child,
-            );
-          },
-          child: Material(
-            color: Colors.transparent,
-            child: ListTile(
-              isThreeLine: false,
-              leading: CircleAvatar(
-                child: Image.asset(
-                  selectDeviceIcon(device),
-                  width: 24,
-                  height: 24,
-                ),
-              ),
-              title: Text(device.name),
-              subtitle: AnimatedBuilder(
-                animation: _controller,
-                child: Text(device.address),
-                builder: (_, child) => Row(
-                  mainAxisSize: MainAxisSize.min,
+                Stack(
+                  alignment: Alignment.centerLeft,
                   children: <Widget>[
-                    child,
-                    const SizedBox(
-                      height: 12,
-                      child: const VerticalDivider(),
+                    Opacity(
+                      opacity: 1 - _curve.value,
+                      child: _lastState,
                     ),
-                    Stack(
-                      alignment: Alignment.centerLeft,
-                      children: <Widget>[
-                        Opacity(
-                          opacity: 1 - _curve.value,
-                          child: _lastState,
-                        ),
-                        Opacity(
-                          opacity: _curve.value,
-                          child: _thisState,
-                        ),
-                      ],
+                    Opacity(
+                      opacity: _curve.value,
+                      child: _thisState,
                     ),
                   ],
                 ),
-              ),
-              onTap: () {
-                if (state == BluetoothDeviceState.CONNECTED) {
-                  Navigator.pushNamed(context, '/device', arguments: device);
-                } else {
-                  Bloc.of(context).bluetooth.connect(device, true);
-                }
-              },
-              trailing: AnimatedBuilder(
-                animation: _controller,
-                builder: (_, child) {
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      Opacity(
-                        opacity: 1 - _curve.value,
-                        child: _lastTailing,
-                      ),
-                      Opacity(
-                        opacity: _curve.value,
-                        child: _thisTailing,
-                      ),
-                    ],
-                  );
-                },
-              ),
+              ],
             ),
           ),
+          builder: (context, child) {
+            return Material(
+              borderRadius: BorderRadius.circular(12),
+              elevation: 0,
+              clipBehavior: Clip.hardEdge,
+              color: _colorTween.evaluate(_controller),
+              child: ListTileTheme(
+                textColor: contentColor,
+                iconColor: contentColor,
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Image.asset(
+                      selectDeviceIcon(device),
+                      color: theme.colorScheme.onPrimary,
+                      width: 24,
+                      height: 24,
+                    ),
+                  ),
+                  title: Text(device.name),
+                  subtitle: child,
+                  onTap: () {
+                    if (state == BluetoothDeviceState.CONNECTED) {
+                      Navigator.pushNamed(context, '/device',
+                          arguments: device);
+                    } else {
+                      Bloc.of(context).bluetooth.connect(device, true);
+                    }
+                  },
+                  trailing: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (_, child) {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: <Widget>[
+                          Opacity(
+                            opacity: 1 - _curve.value,
+                            child: _lastTailing,
+                          ),
+                          Opacity(
+                            opacity: _curve.value,
+                            child: _thisTailing,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

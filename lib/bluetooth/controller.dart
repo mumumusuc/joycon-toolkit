@@ -7,19 +7,19 @@ import 'package:joycon/bluetooth/bluetooth.dart';
 class Controller {
   static const MethodChannel _controllerChannel =
       const MethodChannel('com.mumumusuc.libjoycon/controller');
-  static SendPort sendPort;
+  //static SendPort sendPort;
   final BluetoothDevice device;
 
   static init() async {
-    if (sendPort == null) {
-      /*
+    //if (sendPort == null) {
+    /*
       final ReceivePort response = ReceivePort();
       await Isolate.spawn(_background, response.sendPort);
       print('waiting for background reply');
       sendPort = await response.first;
       print('background replied');
        */
-    }
+    //}
   }
 
   const Controller._(this.device);

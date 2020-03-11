@@ -2,23 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'scale.dart';
-import 'theme.dart';
 
 class AppConfig with ChangeNotifier {
-  AppTheme theme;
+  ThemeData lightTheme;
+  ThemeData darkTheme;
   AppTextScaleValue textScaleFactor;
   bool debug;
   bool timeDilate;
-  bool animate;
   bool showPerformanceOverlay;
   bool showRasterCacheImagesCheckerboard;
   bool showOffscreenLayersCheckerboard;
 
   AppConfig({
-    this.theme,
+    this.lightTheme,
+    this.darkTheme,
     this.textScaleFactor,
     this.timeDilate,
-    this.animate,
     this.debug = false,
     this.showOffscreenLayersCheckerboard = false,
     this.showPerformanceOverlay = false,
@@ -28,17 +27,12 @@ class AppConfig with ChangeNotifier {
   static AppConfig of(BuildContext context) =>
       Provider.of<AppConfig>(context, listen: false);
 
-  bool get darkMode => theme.isDark;
-
-  ThemeData get themeData => theme.data;
-
   void merge(AppConfig config) {
     update(
-      theme: config?.theme,
+      lightTheme: config?.lightTheme,
+      darkTheme: config?.darkTheme,
       timeDilate: config?.timeDilate,
       textScaleFactor: config?.textScaleFactor,
-      darkMode: config?.darkMode,
-      animate: config?.animate,
       debug: config?.debug,
       showOffscreenLayersCheckerboard: config?.showOffscreenLayersCheckerboard,
       showPerformanceOverlay: config?.showPerformanceOverlay,
@@ -48,7 +42,8 @@ class AppConfig with ChangeNotifier {
   }
 
   void update({
-    AppTheme theme,
+    ThemeData lightTheme,
+    ThemeData darkTheme,
     double pageWidth,
     bool timeDilate,
     bool darkMode,
@@ -59,14 +54,10 @@ class AppConfig with ChangeNotifier {
     bool showRasterCacheImagesCheckerboard,
     AppTextScaleValue textScaleFactor,
   }) {
-    this.theme = theme ?? this.theme;
-    darkMode ??= this.darkMode;
-    if (darkMode != this.darkMode) {
-      this.theme = this.theme.copyWith(dark: darkMode);
-    }
+    this.lightTheme = lightTheme ?? this.lightTheme;
+    this.darkTheme = darkTheme ?? this.darkTheme;
     this.textScaleFactor = textScaleFactor ?? this.textScaleFactor;
     this.timeDilate = timeDilate ?? this.timeDilate;
-    this.animate = animate ?? this.animate;
     this.debug = debug ?? this.debug;
     this.showOffscreenLayersCheckerboard =
         showOffscreenLayersCheckerboard ?? this.showOffscreenLayersCheckerboard;
@@ -79,7 +70,8 @@ class AppConfig with ChangeNotifier {
   }
 
   AppConfig copyWith({
-    AppTheme theme,
+    ThemeData lightTheme,
+    ThemeData darkTheme,
     double pageWidth,
     bool timeDilate,
     AppTextScaleValue textScaleFactor,
@@ -90,16 +82,11 @@ class AppConfig with ChangeNotifier {
     bool showPerformanceOverlay,
     bool showRasterCacheImagesCheckerboard,
   }) {
-    theme ??= this.theme;
-    darkMode ??= this.darkMode;
-    if (darkMode != this.darkMode) {
-      theme = theme.copyWith(dark: darkMode);
-    }
     return AppConfig(
-      theme: theme,
+      lightTheme: lightTheme,
+      darkTheme: darkTheme,
       textScaleFactor: textScaleFactor ?? this.textScaleFactor,
       timeDilate: timeDilate ?? this.timeDilate,
-      animate: animate ?? this.animate,
       debug: debug,
       showOffscreenLayersCheckerboard: showOffscreenLayersCheckerboard ??
           this.showOffscreenLayersCheckerboard,
@@ -111,10 +98,45 @@ class AppConfig with ChangeNotifier {
   }
 }
 
-final appDefaultConfig = AppConfig(
-  theme: appDefaultLightTheme,
+final defaultConfig = AppConfig(
+  lightTheme: _build(
+    Brightness.light,
+    Colors.purple,
+    Colors.white,
+  ),
+  darkTheme: _build(
+    Brightness.dark,
+    Colors.purple,
+    Colors.black,
+  ),
   timeDilate: false,
   textScaleFactor: allTextScaleValues[2],
   debug: false,
-  animate: false,
 );
+
+ThemeData buildTheme(Brightness brightness, Color primary, Color accent) =>
+    _build(brightness, primary, accent);
+
+ThemeData _build(Brightness brightness, Color primary, Color accent) {
+  final ColorSwatch primarySwatch = primary;
+  final ThemeData data = ThemeData(
+    brightness: brightness,
+    primarySwatch: primarySwatch,
+    primaryColor: primarySwatch,
+    primaryColorLight: primarySwatch[100],
+    primaryColorDark: primarySwatch[700],
+    accentColor: accent ?? primarySwatch[500],
+    toggleableActiveColor: accent ?? primarySwatch[600],
+  );
+  final String ff = 'GoogleSans';
+  final TextTheme t = data.textTheme;
+  final TextTheme p = data.primaryTextTheme;
+  final TextTheme a = data.accentTextTheme;
+  return data.copyWith(
+    textTheme: t.copyWith(headline6: t.headline6.copyWith(fontFamily: ff)),
+    primaryTextTheme:
+        p.copyWith(headline6: p.headline6.copyWith(fontFamily: ff)),
+    accentTextTheme:
+        a.copyWith(headline6: a.headline6.copyWith(fontFamily: ff)),
+  );
+}

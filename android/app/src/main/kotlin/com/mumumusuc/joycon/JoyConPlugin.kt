@@ -1,53 +1,89 @@
 package com.mumumusuc.joycon
 
-import android.app.Activity
 import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.location.LocationManager
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import com.mumumusuc.libjoycon.BluetoothHelper
-import com.mumumusuc.libjoycon.BluetoothHelper.Companion.BT_STATE_DISCOVERY_OFF
-import com.mumumusuc.libjoycon.BluetoothHelper.Companion.BT_STATE_DISCOVERY_ON
+import com.mumumusuc.libjoycon.BluetoothHelper.Companion.BT_STATE_DEVICE_MASK
 import com.mumumusuc.libjoycon.Controller
-import com.mumumusuc.libjoycon.PermissionHelper
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.*
-import java.lang.RuntimeException
+import android.os.Build.VERSION.SDK_INT
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.EventChannel.EventSink
 
-class JoyConPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, BluetoothHelper.StateChangedCallback {
+
+class JoyConPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, BluetoothHelper.StateChangedCallback {
     companion object {
         const val ROOT = "com.mumumusuc.libjoycon"
     }
 
     private val btHelper by lazy { BluetoothHelper() }
-    private var activity: Activity? = null
-    private var chan_bluetooth: MethodChannel? = null
-    private var chan_controller: MethodChannel? = null
-    private var state_callback: BasicMessageChannel<Any>? = null
+    private var context: Context? = null
+    private var mBluetoothChannel: MethodChannel? = null
+    private var mControllerChannel: MethodChannel? = null
+    private var mVersionChannel: MethodChannel? = null
+    private var mStateCallback: BasicMessageChannel<Any>? = null
     private val controllers = HashSet<Controller>()
+    private var mEventSink: EventSink? = null
 
-    private fun init(messenger: BinaryMessenger) {
-        chan_bluetooth = MethodChannel(messenger, "$ROOT/bluetooth")
-        chan_bluetooth!!.setMethodCallHandler(this)
-        chan_controller = MethodChannel(messenger, "$ROOT/controller")
-        chan_controller!!.setMethodCallHandler(this)
-        state_callback = BasicMessageChannel(messenger, "$ROOT/bluetooth/state", StandardMessageCodec())
+    private fun init(binding: FlutterPlugin.FlutterPluginBinding) {
+        context = binding.applicationContext
+        val messenger = binding.binaryMessenger
+        mBluetoothChannel = MethodChannel(messenger, "$ROOT/bluetooth")
+        mBluetoothChannel!!.setMethodCallHandler(this)
+        mControllerChannel = MethodChannel(messenger, "$ROOT/controller")
+        mControllerChannel!!.setMethodCallHandler(this)
+        mVersionChannel = MethodChannel(messenger, "$ROOT/version")
+        mVersionChannel!!.setMethodCallHandler(this)
+        mStateCallback = BasicMessageChannel(messenger, "$ROOT/bluetooth/state", StandardMessageCodec())
+        val eventChannel = EventChannel(messenger, "$ROOT/location/state")
+        eventChannel.setStreamHandler(this)
+        btHelper.register(context!!, this)
+    }
+
+    private fun deInit() {
+        btHelper.unregister(context!!)
+        context!!.unregisterReceiver(locationReceiver)
+        context = null
+        mBluetoothChannel!!.setMethodCallHandler(null)
+        mBluetoothChannel = null
+        mControllerChannel!!.setMethodCallHandler(null)
+        mControllerChannel = null
+        mStateCallback = null
     }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        init(binding.binaryMessenger)
+        init(binding)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        chan_bluetooth!!.setMethodCallHandler(null)
-        chan_bluetooth = null
-        chan_controller!!.setMethodCallHandler(null)
-        chan_controller = null
-        state_callback = null
+        deInit()
+    }
+
+    override fun onListen(arguments: Any?, events: EventSink) {
+        val filter = IntentFilter(LocationManager.MODE_CHANGED_ACTION)
+        context!!.registerReceiver(locationReceiver, filter)
+        mEventSink = events
+        emitLocationServiceStatus(isLocationServiceEnabled(context!!))
+    }
+
+    override fun onCancel(arguments: Any?) {
+        context!!.unregisterReceiver(locationReceiver)
+        mEventSink = null
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "isAndroidQ" -> {
+                result.success(SDK_INT >= 29)
+            }
             /* bluetooth methods */
             "enable" -> {
                 val on = call.argument<Boolean>("on")!!
@@ -278,15 +314,12 @@ class JoyConPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, BluetoothHe
         }
     }
 
-    fun register(activity: Activity) {
-        this.activity = activity
-        btHelper.register(activity, this)
-        btHelper.enable(true)
-    }
-
-    fun unregister() {
-        btHelper.unregister(activity!!)
-        this.activity = null
+    private val locationReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(p0: Context, p1: Intent) {
+            if (p1.action == LocationManager.MODE_CHANGED_ACTION) {
+                emitLocationServiceStatus(isLocationServiceEnabled(context!!))
+            }
+        }
     }
 
     private fun filterDevice(name: String): Boolean {
@@ -301,13 +334,31 @@ class JoyConPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, BluetoothHe
     }
 
     override fun onStateChanged(name: String?, address: String?, state: Int) {
-        val cb = state_callback ?: return
-        when (state) {
-            BT_STATE_DISCOVERY_ON, BT_STATE_DISCOVERY_OFF -> {
-            }
-            else -> if (!filterDevice(name ?: "")) return
-        }
+        val cb = mStateCallback ?: return
+        if (state.and(BT_STATE_DEVICE_MASK) != 0)
+            if (!filterDevice(name ?: "")) return
         cb.send(mapOf(Pair("name", name), Pair("address", address), Pair("state", state)))
+    }
+
+    private fun emitLocationServiceStatus(enabled: Boolean) {
+        mEventSink?.success(enabled)
+    }
+
+    private fun isLocationServiceEnabled(context: Context): Boolean {
+        if (SDK_INT >= 28) {
+            val locationManager = context.getSystemService(LocationManager::class.java)
+                    ?: return false
+            return locationManager.isLocationEnabled
+        } else {
+            val locationMode: Int
+            try {
+                locationMode = Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE)
+            } catch (e: Settings.SettingNotFoundException) {
+                e.printStackTrace()
+                return false
+            }
+            return locationMode != Settings.Secure.LOCATION_MODE_OFF
+        }
     }
 
 }

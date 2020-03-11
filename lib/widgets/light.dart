@@ -302,16 +302,14 @@ class LightWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('build light widget');
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const ListTile(title: Text('Player & Flash')),
-          _buildPlayerLightCard(context),
-          const ListTile(title: Text('Home Ring')),
-          _buildHomeLightCard(context),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const ListTile(title: Text('Player & Flash')),
+        _buildPlayerLightCard(context),
+        const ListTile(title: Text('Home Ring')),
+        _buildHomeLightCard(context),
+      ],
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:joycon/bluetooth/bluetooth.dart';
 import 'package:joycon/bluetooth/controller.dart';
 import 'package:provider/provider.dart';
 
@@ -260,7 +259,7 @@ class ColorWidget extends StatelessWidget {
             leading: const Icon(Icons.palette),
             title: Consumer<ValueNotifier<_Profile>>(
               child: const Text('custom'),
-              builder: (c, v, child) {
+              builder: (context, v, child) {
                 _Profile profile = v.value;
                 if (!_profiles.contains(profile)) profile = null;
                 return DropdownButton<_Profile>(
@@ -282,26 +281,28 @@ class ColorWidget extends StatelessWidget {
                 );
               },
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: () {
-                _Profile p = _getProfileNotifier(context).value;
-                if (p.code != null) {
-                  controller.setColor(
-                    p.code,
-                    _Profile.None,
-                    _Profile.None,
-                    _Profile.None,
-                  );
-                } else {
-                  controller.setColor(
-                    p.body,
-                    p.button,
-                    p.leftGrip,
-                    p.rightGrip,
-                  );
-                }
-              },
+            trailing: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: () {
+                  _Profile p = _getProfileNotifier(context).value;
+                  if (p.code != null) {
+                    controller.setColor(
+                      p.code,
+                      _Profile.None,
+                      _Profile.None,
+                      _Profile.None,
+                    );
+                  } else {
+                    controller.setColor(
+                      p.body,
+                      p.button,
+                      p.leftGrip,
+                      p.rightGrip,
+                    );
+                  }
+                },
+              ),
             ),
           ),
           const Divider(height: 3),
@@ -338,7 +339,7 @@ class ColorWidget extends StatelessWidget {
           dispose: (_, v) => v.dispose(),
         ),
       ],
-      child: SingleChildScrollView(child: _buildColorCard2(context)),
+      child: _buildColorCard2(context),
     );
   }
 

@@ -21,6 +21,7 @@ class Bloc with BluetoothCallbackMixin {
   Bloc._() {
     bluetooth.addListener(this);
     bluetooth.getAdapterState().then((value) {
+      _adapter.value = value;
       if (value == BluetoothState.ENABLED) {
         _fetchDeviceState();
       }
@@ -28,20 +29,21 @@ class Bloc with BluetoothCallbackMixin {
   }
 
   void _fetchDeviceState() {
-    Future.wait([
-      bluetooth.getPairedDevices().then((v) {
-        _devices.append(
-          Map.fromIterable(
-            v,
-            key: (it) => it,
-            value: (it) => BluetoothDeviceMeta(
-              state: BluetoothDeviceState.PAIRED,
-            ),
+    bluetooth.getPairedDevices().then((v) {
+      print('getPairedDevices -> ${v.length}');
+      _devices.append(
+        Map.fromIterable(
+          v,
+          key: (it) => it,
+          value: (it) => BluetoothDeviceMeta(
+            state: BluetoothDeviceState.PAIRED,
           ),
-          notify: false,
-        );
-      }),
-      bluetooth.getConnectedDevices().then((v) {
+        ),
+        notify: false,
+      );
+    }).then((v) {
+      return bluetooth.getConnectedDevices().then((v) {
+        print('getConnectedDevices -> ${v.length}');
         _devices.update(
           Map.fromIterable(
             v,
@@ -52,15 +54,15 @@ class Bloc with BluetoothCallbackMixin {
           ),
           notify: false,
         );
-      }),
-    ]).then((_) => _devices._notify());
+      });
+    }).then((_) => _devices._notify());
   }
 
   static List<SingleChildWidget> get providers => [
         Provider<Bloc>(create: (_) => Bloc._(), dispose: (_, v) => v.dispose()),
         ValueListenableProvider(create: (c) => Bloc.of(c)._devices),
         ValueListenableProvider(create: (c) => Bloc.of(c)._adapter),
-        ListenableProvider.value(value: appDefaultConfig),
+        ListenableProvider.value(value: defaultConfig),
       ];
 
   void dispose() {
@@ -142,24 +144,28 @@ class BluetoothDeviceMap {
   }
 
   bool _append(Map<BluetoothDevice, BluetoothDeviceMeta> data) {
-    return data.entries.map((e) {
+    if (data.isEmpty) return false;
+    // DO *NOT* use any(), it is too lazy!
+    return data.entries.map<bool>((e) {
       if (_data.containsKey(e.key)) return false;
       _data[e.key] = e.value;
       return true;
-    }).any((e) => e);
+    }).reduce((v, e) => v & e);
   }
 
   bool _update(Map<BluetoothDevice, BluetoothDeviceMeta> data) {
+    if (data.isEmpty) return false;
     return data.entries.map((e) {
       if (_data.containsKey(e.key) && _data[e.key] != e.value) {
         _data[e.key] = e.value;
         return true;
       }
       return false;
-    }).any((e) => e);
+    }).reduce((v, e) => v & e);
   }
 
   bool _remove(BluetoothDevice device) {
+    if (_data.isEmpty) return false;
     if (_data.containsKey(device)) {
       _data.remove(device);
       return true;

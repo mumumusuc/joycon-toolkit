@@ -15,22 +15,22 @@ class ControllerWidget extends StatelessWidget {
     _WidgetHolder(
       name: 'General',
       icon: const Icon(Icons.perm_device_information),
-      builder: (c) => AliveWidgetBuilder(child: DeviceWidget(c)),
+      builder: (c) => DeviceWidget(c),
     ),
     _WidgetHolder(
       name: 'Rumble',
       icon: const Icon(Icons.vibration),
-      builder: (c) => AliveWidgetBuilder(child: RumbleWidget(c)),
+      builder: (c) => RumbleWidget(c),
     ),
     _WidgetHolder(
       name: 'Light',
       icon: const Icon(Icons.highlight),
-      builder: (c) => AliveWidgetBuilder(child: LightWidget(c)),
+      builder: (c) => LightWidget(c),
     ),
     _WidgetHolder(
       name: 'Color',
       icon: const Icon(Icons.color_lens),
-      builder: (c) => AliveWidgetBuilder(child: ColorWidget(c)),
+      builder: (c) => ColorWidget(c),
     ),
   ];
   final ValueNotifier<int> _index = ValueNotifier(0);
@@ -68,92 +68,67 @@ class ControllerWidget extends StatelessWidget {
   Widget _build(BuildContext context) {
     print('build controller body');
     return Scaffold(
-      appBar: AppBar(
-        title: Consumer<int>(
-          builder: (_, v, __) => Text(_slivers[v].name),
+      bottomNavigationBar: BottomAppBar(
+        shape: CircularNotchedRectangle(),
+        notchMargin: 0.0,
+        child: Consumer<int>(
+          builder: (context, index, _) {
+            return BottomNavigationBar(
+              selectedItemColor: Theme.of(context).primaryColorLight,
+              unselectedItemColor: Theme.of(context).unselectedWidgetColor,
+              currentIndex: index,
+              onTap: (i) {
+                _controller.animateToPage(
+                  i,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              items: _slivers.map((e) {
+                return BottomNavigationBarItem(
+                  title: Text(e.name),
+                  icon: e.icon,
+                );
+              }).toList(),
+            );
+          },
         ),
       ),
-      bottomNavigationBar: Consumer<int>(
-        builder: (context, index, _) {
-          return BottomNavigationBar(
-            type: BottomNavigationBarType.shifting,
-            selectedItemColor: Theme.of(context).primaryColor,
-            unselectedItemColor: Theme.of(context).unselectedWidgetColor,
-            currentIndex: index,
-            onTap: (i) {
-              _controller.animateToPage(
-                i,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
-            items: _slivers.map((e) {
-              return BottomNavigationBarItem(title: Text(e.name), icon: e.icon);
-            }).toList(),
-          );
-        },
-      ),
-      drawer: Drawer(
-        child: ListTileTheme(
-          style: ListTileStyle.drawer,
-          child: ListView(
-            padding: const EdgeInsets.all(0),
-            children: _slivers.map<Widget>((it) {
-              final index = _slivers.indexOf(it);
-              return Consumer<int>(
-                child: Text(it.name),
-                builder: (_, v, child) {
-                  final selected = index == v;
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: selected ? Colors.black12 : Colors.transparent,
-                      border: const Border(
-                        bottom:
-                            const BorderSide(color: const Color(0x0F222222)),
-                      ),
-                    ),
-                    child: ListTile(
-                      title: child,
-                      onTap: () {
-                        if (!selected) {
-                          _controller.jumpToPage(index);
-                          _index.value = index;
-                          Navigator.pop(context);
-                        }
-                      },
-                      selected: selected,
-                    ),
-                  );
-                },
-              );
-            }).toList()
-              ..insert(
-                0,
-                UserAccountsDrawerHeader(
-                  accountName: Text(device.name),
-                  accountEmail: Text(device.address),
-                  currentAccountPicture: CircleAvatar(
-                    child: Image.asset(
-                      selectDeviceIcon(device),
-                      color: Colors.white,
-                      width: 48,
-                      height: 48,
-                    ),
-                  ),
-                ),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, _) {
+          final ThemeData theme = Theme.of(context);
+          return [
+            SliverAppBar(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              iconTheme: theme.iconTheme,
+              textTheme: theme.textTheme,
+              title: Text(device.name),
+              centerTitle: true,
+              floating: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
               ),
-          ),
-        ),
-      ),
-      body: Consumer<Controller>(
-        builder: (_, controller, __) {
-          return PageView(
-            controller: _controller,
-            //scrollDirection: Axis.vertical,
-            children: _slivers.map((e) => e.builder(controller)).toList(),
-            onPageChanged: (v) => _index.value = v,
-          );
+            ),
+          ];
         },
+        body: Consumer<Controller>(
+          builder: (_, controller, __) {
+            return PageView(
+              controller: _controller,
+              //scrollDirection: Axis.vertical,
+              children: _slivers.map((e) {
+                return AliveWidgetBuilder(
+                  child: SingleChildScrollView(
+                    child: e.builder(controller),
+                  ),
+                );
+              }).toList(),
+              onPageChanged: (v) => _index.value = v,
+            );
+          },
+        ),
       ),
     );
   }

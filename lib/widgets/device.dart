@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:joycon/bluetooth/bluetooth.dart';
 import 'package:joycon/bluetooth/controller.dart';
-import 'package:provider/provider.dart';
 
 class DeviceWidget extends StatelessWidget {
   final Controller controller;
@@ -72,10 +71,15 @@ class DeviceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('build device widget');
-    return ListView(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        const ListTile(title: const Text('Info & Status')),
-        _buildStatusCard(context),
+        const ListTile(title: const Text('Info')),
+        Hero(
+          tag: controller.device,
+          child: _buildStatusCard(context),
+        ),
         const ListTile(title: const Text('Button')),
         _buildButtonCard(context),
         const ListTile(title: const Text('6-Axis')),
