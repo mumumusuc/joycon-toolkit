@@ -68,6 +68,13 @@ class DeviceWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildMemoryCard(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.all(8),
+      child: SvgPicture.asset('assets/image/empty.svg'),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     //print('build device widget');
@@ -84,6 +91,8 @@ class DeviceWidget extends StatelessWidget {
         _buildButtonCard(context),
         const ListTile(title: const Text('6-Axis')),
         _buildIMUCard(context),
+        const ListTile(title: const Text('Memory')),
+        _buildMemoryCard(context),
       ],
     );
   }

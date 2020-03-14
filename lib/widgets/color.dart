@@ -1,8 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:joycon/bluetooth/controller.dart';
 import 'package:provider/provider.dart';
+
+const double _maxWidth = 350;
+const double _maxHeight = 350;
+const double _minWidth = 300;
+const double _minHeight = 300;
 
 class ColorWidget extends StatelessWidget {
   final Controller controller;
@@ -132,13 +138,16 @@ class ColorWidget extends StatelessWidget {
     final List<Widget> children = [
       ColorFiltered(
         colorFilter: ColorFilter.mode(
-            Color(Colors.white.value - bgColor.value).withOpacity(1),
-            BlendMode.srcIn),
-        child: Image.asset(_OutlineAssets[_index]),
+          Color(Colors.white.value - bgColor.value).withOpacity(1),
+          BlendMode.srcIn,
+        ),
+        child: SvgPicture.asset(_OutlineAssets[_index]),
+        //Image.asset(_OutlineAssets[_index]),
       ),
       Selector<ValueNotifier<_Profile>, Color>(
         selector: (c, p) => p.value.body,
-        child: Image.asset(_BodyAssets[_index]),
+        child: SvgPicture.asset(_BodyAssets[_index]),
+        //Image.asset(_BodyAssets[_index]),
         builder: (_, color, child) {
           return ColorFiltered(
             colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
@@ -148,7 +157,8 @@ class ColorWidget extends StatelessWidget {
       ),
       Selector<ValueNotifier<_Profile>, Color>(
         selector: (c, p) => p.value.button,
-        child: Image.asset(_ButtonAssets[_index]),
+        child: SvgPicture.asset(_ButtonAssets[_index]),
+        //Image.asset(_ButtonAssets[_index]),
         builder: (_, color, child) {
           return ColorFiltered(
             colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
@@ -161,7 +171,8 @@ class ColorWidget extends StatelessWidget {
       children.addAll([
         Selector<ValueNotifier<_Profile>, Color>(
           selector: (c, p) => p.value.leftGrip,
-          child: Image.asset(_LeftGripAssets[_index]),
+          child: SvgPicture.asset(_LeftGripAssets[_index]),
+          //Image.asset(_LeftGripAssets[_index]),
           builder: (_, color, child) {
             return ColorFiltered(
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
@@ -171,7 +182,8 @@ class ColorWidget extends StatelessWidget {
         ),
         Selector<ValueNotifier<_Profile>, Color>(
           selector: (c, p) => p.value.rightGrip,
-          child: Image.asset(_RightGripAssets[_index]),
+          child: SvgPicture.asset(_RightGripAssets[_index]),
+          //Image.asset(_RightGripAssets[_index]),
           builder: (_, color, child) {
             return ColorFiltered(
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
@@ -181,9 +193,17 @@ class ColorWidget extends StatelessWidget {
         ),
       ]);
     }
-    return Stack(
-      alignment: Alignment.center,
-      children: children,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxWidth: _maxWidth,
+        maxHeight: _maxHeight,
+        minWidth: _minWidth,
+        minHeight: _minHeight,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: children,
+      ),
     );
   }
 
@@ -348,26 +368,26 @@ class ColorWidget extends StatelessWidget {
 }
 
 const _OutlineAssets = const [
-  'assets/image/pro_controller_outline.png',
-  'assets/image/joycon_l_outline.png',
-  'assets/image/joycon_r_outline.png',
+  'assets/image/pro_controller_outline.svg',
+  'assets/image/joycon_l_outline.svg',
+  'assets/image/joycon_r_outline.svg',
 ];
 
 const _BodyAssets = const [
-  'assets/image/pro_controller_body.png',
-  'assets/image/joycon_l.png',
-  'assets/image/joycon_r.png',
+  'assets/image/pro_controller_body.svg',
+  'assets/image/joycon_l.svg',
+  'assets/image/joycon_r.svg',
 ];
 
 const _ButtonAssets = const [
-  'assets/image/pro_controller_button.png',
-  'assets/image/joycon_l_button.png',
-  'assets/image/joycon_r_button.png',
+  'assets/image/pro_controller_button.svg',
+  'assets/image/joycon_l_button.svg',
+  'assets/image/joycon_r_button.svg',
 ];
 
-const _LeftGripAssets = const ['assets/image/pro_controller_grip_left.png'];
+const _LeftGripAssets = const ['assets/image/pro_controller_grip_l.svg'];
 
-const _RightGripAssets = const ['assets/image/pro_controller_grip_right.png'];
+const _RightGripAssets = const ['assets/image/pro_controller_grip_r.svg'];
 
 class _Profile {
   static const Color Black = const Color(0xFF000000);

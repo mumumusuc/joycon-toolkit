@@ -83,17 +83,17 @@ class AppConfig with ChangeNotifier {
     bool showRasterCacheImagesCheckerboard,
   }) {
     return AppConfig(
-      lightTheme: lightTheme,
-      darkTheme: darkTheme,
+      lightTheme: lightTheme ?? this.lightTheme,
+      darkTheme: darkTheme ?? this.darkTheme,
       textScaleFactor: textScaleFactor ?? this.textScaleFactor,
       timeDilate: timeDilate ?? this.timeDilate,
-      debug: debug,
+      debug: debug ?? this.debug,
       showOffscreenLayersCheckerboard: showOffscreenLayersCheckerboard ??
           this.showOffscreenLayersCheckerboard,
-      showPerformanceOverlay: showOffscreenLayersCheckerboard ??
-          this.showOffscreenLayersCheckerboard,
+      showPerformanceOverlay:
+          showOffscreenLayersCheckerboard ?? this.showPerformanceOverlay,
       showRasterCacheImagesCheckerboard: showOffscreenLayersCheckerboard ??
-          this.showOffscreenLayersCheckerboard,
+          this.showRasterCacheImagesCheckerboard,
     );
   }
 }
@@ -111,6 +111,7 @@ final defaultConfig = AppConfig(
   ),
   timeDilate: false,
   textScaleFactor: allTextScaleValues[2],
+  showPerformanceOverlay: false,
   debug: false,
 );
 

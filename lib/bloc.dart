@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:joycon/bluetooth/bluetooth.dart';
 import 'package:joycon/bluetooth/controller.dart';
 import 'package:joycon/option/config.dart';
@@ -26,11 +27,44 @@ class Bloc with BluetoothCallbackMixin {
         _fetchDeviceState();
       }
     });
+    // test
+    _devices.append(
+      Map.fromIterable(
+        List.generate(
+          3,
+          (i) => BluetoothDevice(
+            name: DeviceCategory.names[i],
+            address: '00:11:22:33:$i$i:55',
+          ),
+        ),
+        key: (it) => it,
+        value: (it) => BluetoothDeviceMeta(
+          state: BluetoothDeviceState.PAIRED,
+        ),
+      ),
+      notify: false,
+    );
+    _devices.append(
+      Map.fromIterable(
+        List.generate(
+          3,
+          (i) => BluetoothDevice(
+            name: DeviceCategory.names[i],
+            address: '00:11:22:33:44:$i$i',
+          ),
+        ),
+        key: (it) => it,
+        value: (it) => BluetoothDeviceMeta(
+          state: BluetoothDeviceState.CONNECTED,
+        ),
+      ),
+      notify: false,
+    );
   }
 
   void _fetchDeviceState() {
     bluetooth.getPairedDevices().then((v) {
-      print('getPairedDevices -> ${v.length}');
+      // print('getPairedDevices -> ${v.length}');
       _devices.append(
         Map.fromIterable(
           v,
@@ -43,7 +77,7 @@ class Bloc with BluetoothCallbackMixin {
       );
     }).then((v) {
       return bluetooth.getConnectedDevices().then((v) {
-        print('getConnectedDevices -> ${v.length}');
+        //  print('getConnectedDevices -> ${v.length}');
         _devices.update(
           Map.fromIterable(
             v,
@@ -211,7 +245,7 @@ class _BluetoothDeviceNotifier extends ChangeNotifier
     notifyListeners();
   }
 }
-
+/*
 String selectDeviceIcon(BluetoothDevice device) {
   switch (device.category) {
     case DeviceCategory.ProController:
@@ -226,8 +260,46 @@ String selectDeviceIcon(BluetoothDevice device) {
       throw ArgumentError.value(device.name);
   }
 }
+ */
+
+Widget getDeviceIcon(BluetoothDevice device, {Size size, Color color}) {
+  switch (device.category) {
+    case DeviceCategory.ProController:
+      return SvgPicture.asset(
+        'assets/image/pro_controller.svg',
+        width: size?.width,
+        height: size?.height,
+        color: color,
+      );
+    case DeviceCategory.JoyCon_L:
+      return SvgPicture.asset(
+        'assets/image/joycon_l.svg',
+        width: size?.width,
+        height: size?.height,
+        color: color,
+      );
+    case DeviceCategory.JoyCon_R:
+      return SvgPicture.asset(
+        'assets/image/joycon_r.svg',
+        width: size?.width,
+        height: size?.height,
+        color: color,
+      );
+    case DeviceCategory.JoyCon_Dual:
+      return Image.asset(
+        'assets/image/joycon_d_icon.png',
+        width: size?.width,
+        height: size?.height,
+        color: color,
+      );
+    default:
+      throw ArgumentError.value(device.name);
+  }
+}
 
 //
-const Color dividerColor = const Color(0x07444444);
-const BorderSide dividerBorderSide =
-    const BorderSide(color: dividerColor, width: 0);
+const double kPageMaxWidth = 500;
+const Duration kDuration = const Duration(milliseconds: 600);
+const Color kDividerColor = const Color(0x07444444);
+const BorderSide kDividerBorderSide =
+    const BorderSide(color: kDividerColor, width: 0);

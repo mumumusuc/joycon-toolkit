@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -12,10 +13,17 @@ import 'bloc.dart';
 import 'bluetooth/bluetooth.dart';
 import 'generated/i18n.dart';
 import 'permission.dart';
+import 'widgets/controller.dart';
 import 'widgets/fade.dart';
 
-const Duration _kDuration = const Duration(milliseconds: 300);
 const String _githubUrl = 'https://github.com/mumumusuc/joycon-toolkit';
+const ShapeBorder _cardBorder = const RoundedRectangleBorder(
+  borderRadius: const BorderRadius.all(const Radius.circular(20.0)),
+);
+const String _svgDot =
+    '''<svg style="width:24px;height:24px" viewBox="0 0 24 24">
+    <path fill="#FFF" d="M12,10A2,2 0 0,0 10,12C10,13.11 10.9,14 12,14C13.11,14 14,13.11 14,12A2,2 0 0,0 12,10Z" />
+</svg>''';
 
 class HomePage extends StatefulWidget {
   const HomePage();
@@ -49,53 +57,65 @@ class _HomePageState extends PermissionState<HomePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Selector<BluetoothState, bool>(
-              selector: (_, s) => s != BluetoothState.DISABLED,
-              builder: (context, hide, child) {
-                return FadeWidget(
-                  fade: hide,
-                  child: _buildBluetoothBanner(context),
-                );
-              },
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.loose(
+            const Size.fromWidth(kPageMaxWidth),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Selector<BluetoothState, bool>(
+                  selector: (_, s) => s != BluetoothState.DISABLED,
+                  builder: (context, hide, child) {
+                    return FadeWidget(
+                      fade: hide,
+                      child: _buildBluetoothBanner(context),
+                    );
+                  },
+                ),
+                buildPermissionBanner(
+                  container: (child) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [const Divider(height: 3), child],
+                  ),
+                ),
+                buildServiceBanner(
+                  container: (child) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [const Divider(height: 3), child],
+                  ),
+                ),
+                const Divider(),
+                Selector<BluetoothDeviceMap, int>(
+                  selector: (context, map) => map.devices.length,
+                  builder: (context, length, child) {
+                    return _ListWidget(
+                      children: length == 0
+                          ? null
+                          : BluetoothDeviceMap.of(context)
+                              .devices
+                              .map<Widget>((it) {
+                              return Selector<BluetoothDeviceMap,
+                                  BluetoothDeviceMeta>(
+                                selector: (context, map) => map[it.key],
+                                builder: (context, meta, child) {
+                                  print('build device selector');
+                                  final Widget card = _DeviceCard(it.key, meta);
+                                  return Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: card,
+                                  );
+                                },
+                              );
+                            }).toList(),
+                    );
+                  },
+                ),
+              ],
             ),
-            buildPermissionBanner(
-              container: (child) => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[const Divider(height: 3), child],
-              ),
-            ),
-            buildServiceBanner(
-              container: (child) => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[const Divider(height: 3), child],
-              ),
-            ),
-            const Divider(),
-            Selector<BluetoothDeviceMap, int>(
-              selector: (context, map) => map.devices.length,
-              builder: (context, length, child) {
-                return _ListWidget(
-                  children: length == 0
-                      ? null
-                      : BluetoothDeviceMap.of(context)
-                          .devices
-                          .map<Widget>((it) {
-                          return Selector<BluetoothDeviceMap,
-                              BluetoothDeviceMeta>(
-                            selector: (context, map) => map[it.key],
-                            builder: (context, meta, child) {
-                              return _DeviceCard(it.key, meta);
-                            },
-                          );
-                        }).toList(),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
       floatingActionButton: Consumer<BluetoothState>(
@@ -147,16 +167,17 @@ class _HomePageState extends PermissionState<HomePage> {
   }
 
   void _buildAboutDialog(BuildContext context) {
-    final TextStyle textStyle = Theme.of(context).textTheme.bodyText2;
+    final ThemeData theme = Theme.of(context);
+    final TextStyle textStyle = theme.textTheme.bodyText2;
     showAboutDialog(
       context: context,
       applicationIcon: ClipOval(
         child: CircleAvatar(
-          child: Image.asset('assets/image/icon.png'),
+          child: SvgPicture.asset('assets/image/icon.svg'),
         ),
       ),
       applicationName: S.of(context).app_title,
-      applicationVersion: '0.0.2 Feb 2020',
+      applicationVersion: '0.0.4 Feb 2020',
       applicationLegalese: '© 2020 mumumusuc',
       children: [
         SizedBox(height: 24),
@@ -168,11 +189,7 @@ class _HomePageState extends PermissionState<HomePage> {
                 text: S.of(context).about_desc,
               ),
               TextSpan(
-                style: textStyle.copyWith(
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: hyperLinkTextStyle,
                 text: _githubUrl,
                 recognizer: TapGestureRecognizer()
                   ..onTap = () async {
@@ -206,10 +223,7 @@ class _ListWidget extends StatelessWidget {
         firstChild: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SvgPicture.asset(
-              'assets/image/empty.svg',
-              semanticsLabel: 'empty',
-            ),
+            SvgPicture.asset('assets/image/empty.svg'),
             Text(
               S.of(context).no_device,
               style: Theme.of(context).textTheme.caption,
@@ -223,7 +237,7 @@ class _ListWidget extends StatelessWidget {
         crossFadeState: children?.isNotEmpty == true
             ? CrossFadeState.showSecond
             : CrossFadeState.showFirst,
-        duration: _kDuration,
+        duration: kDuration,
         layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
           return Stack(
             overflow: Overflow.visible,
@@ -266,7 +280,7 @@ class _DiscoveryWidgetState extends State<_DiscoveryWidget>
       vsync: this,
       duration: const Duration(seconds: 1),
     );
-    _scale = AnimationController(vsync: this, duration: _kDuration);
+    _scale = AnimationController(vsync: this, duration: kDuration);
     super.initState();
   }
 
@@ -331,23 +345,36 @@ class _DeviceCardState extends State<_DeviceCard>
     with SingleTickerProviderStateMixin {
   AnimationController _controller;
   CurvedAnimation _curve;
-  ColorTween _colorTween;
-  Widget _lastState;
-  Widget _thisState;
+  ColorTween _color;
+  String _lastState;
+  String _thisState;
   Widget _lastTailing;
   Widget _thisTailing;
 
-  BluetoothDevice get device => widget.device;
+  BluetoothDevice get _device => widget.device;
 
-  BluetoothDeviceState get state => widget.meta.state;
+  BluetoothDeviceState get _state => widget.meta.state;
 
-  Color _getStateColor(BuildContext context, BluetoothDeviceState state) {
-    if (context == null) return null;
+  Widget get _pairedTrailing => Icon(Icons.bluetooth_connected);
+
+  Widget get _connectedTrailing => IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: _disconnect,
+      );
+
+  Widget get _waitingTrailing => SizedBox(
+        width: 20,
+        height: 20,
+        child: const CircularProgressIndicator(strokeWidth: 2),
+      );
+
+  Color _getStateColor(BluetoothDeviceState state) {
     switch (state) {
       case BluetoothDeviceState.CONNECTED:
+        return Theme.of(context).colorScheme.primary;
       case BluetoothDeviceState.CONNECTING:
       case BluetoothDeviceState.DISCONNECTING:
-        return Theme.of(context).colorScheme.primary;
+        return Theme.of(context).colorScheme.primary.withOpacity(0.5);
       default:
         return Theme.of(context).cardColor;
     }
@@ -357,22 +384,15 @@ class _DeviceCardState extends State<_DeviceCard>
     Widget w = SizedBox();
     switch (state) {
       case BluetoothDeviceState.CONNECTED:
-        w = IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Bloc.of(context).bluetooth.connect(device, false),
-        );
+        w = _connectedTrailing;
         break;
       case BluetoothDeviceState.PAIRED:
-        w = const Icon(Icons.bluetooth_connected);
+        w = _pairedTrailing;
         break;
       case BluetoothDeviceState.PAIRING:
       case BluetoothDeviceState.CONNECTING:
       case BluetoothDeviceState.DISCONNECTING:
-        w = const SizedBox(
-          width: 20,
-          height: 20,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        );
+        w = _waitingTrailing;
         break;
       default:
         break;
@@ -380,7 +400,7 @@ class _DeviceCardState extends State<_DeviceCard>
     return SizedOverflowBox(size: const Size(24, 24), child: w);
   }
 
-  String _getStateString(BuildContext context, BluetoothDeviceState state) {
+  String _getStateString(BluetoothDeviceState state) {
     switch (state) {
       case BluetoothDeviceState.PAIRING:
         return S.of(context).device_state_pairing;
@@ -397,12 +417,14 @@ class _DeviceCardState extends State<_DeviceCard>
     }
   }
 
+  void _disconnect() => Bloc.of(context).bluetooth.connect(_device, false);
+
   @override
   void initState() {
-    _controller = AnimationController(vsync: this, duration: _kDuration);
-    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    _colorTween = ColorTween();
     super.initState();
+    _controller = AnimationController(vsync: this, duration: kDuration);
+    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _color = ColorTween();
   }
 
   @override
@@ -413,13 +435,14 @@ class _DeviceCardState extends State<_DeviceCard>
 
   @override
   void didUpdateWidget(_DeviceCard oldWidget) {
+    print('didUpdateWidget');
     if (widget.meta != oldWidget.meta) {
-      _lastTailing = _getStateTrailing(oldWidget.meta.state);
-      _thisTailing = _getStateTrailing(state);
-      _lastState = Text(_getStateString(context, oldWidget.meta.state));
-      _thisState = Text(_getStateString(context, state));
-      _colorTween.begin = _getStateColor(context, oldWidget.meta.state);
-      _colorTween.end = _getStateColor(context, state);
+      _lastTailing = _getStateTrailing(_state);
+      _thisTailing = _getStateTrailing(_state);
+      _lastState = _getStateString(oldWidget.meta.state);
+      _thisState = _getStateString(_state);
+      _color.begin = _getStateColor(oldWidget.meta.state);
+      _color.end = _getStateColor(_state);
       _controller.reset();
       _controller.forward();
     }
@@ -429,111 +452,116 @@ class _DeviceCardState extends State<_DeviceCard>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    print('didChangeDependencies');
     switch (_controller.status) {
       case AnimationStatus.dismissed:
       case AnimationStatus.reverse:
-        _colorTween.begin = _getStateColor(context, state);
+        _color.begin = _getStateColor(_state);
         break;
       default:
-        _colorTween.end = _getStateColor(context, state);
+        _color.end = _getStateColor(_state);
         break;
     }
-    _thisState ??= _lastState ??= Text(_getStateString(context, state));
-    _thisTailing ??= _lastTailing ??= _getStateTrailing(state);
+    _thisState ??= _lastState ??= _getStateString(_state);
+    _thisTailing ??= _lastTailing ??= _getStateTrailing(_state);
   }
 
   @override
   Widget build(BuildContext context) {
+    print('build DeviceCard');
     final ThemeData theme = Theme.of(context);
-    final Color contentColor =
-        widget.meta.state == BluetoothDeviceState.CONNECTED
-            ? theme.colorScheme.onPrimary
-            : null;
-    _colorTween.begin ??= _getStateColor(context, state);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: LimitedBox(
-        maxHeight: 80,
-        child: AnimatedBuilder(
-          animation: _controller,
-          child: AnimatedBuilder(
-            animation: _controller,
-            child: Text(device.address),
-            builder: (_, child) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                const SizedBox(
-                  height: 12,
-                  child: const VerticalDivider(),
-                ),
-                Stack(
-                  alignment: Alignment.centerLeft,
-                  children: <Widget>[
-                    Opacity(
-                      opacity: 1 - _curve.value,
-                      child: _lastState,
-                    ),
-                    Opacity(
-                      opacity: _curve.value,
-                      child: _thisState,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          builder: (context, child) {
-            return Material(
-              borderRadius: BorderRadius.circular(12),
-              elevation: 0,
-              clipBehavior: Clip.hardEdge,
-              color: _colorTween.evaluate(_controller),
-              child: ListTileTheme(
-                textColor: contentColor,
-                iconColor: contentColor,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Image.asset(
-                      selectDeviceIcon(device),
-                      color: theme.colorScheme.onPrimary,
-                      width: 24,
-                      height: 24,
-                    ),
-                  ),
-                  title: Text(device.name),
-                  subtitle: child,
-                  onTap: () {
-                    if (state == BluetoothDeviceState.CONNECTED) {
-                      Navigator.pushNamed(context, '/device',
-                          arguments: device);
-                    } else {
-                      Bloc.of(context).bluetooth.connect(device, true);
-                    }
-                  },
-                  trailing: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (_, child) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: <Widget>[
-                          Opacity(
-                            opacity: 1 - _curve.value,
-                            child: _lastTailing,
-                          ),
-                          Opacity(
-                            opacity: _curve.value,
-                            child: _thisTailing,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            );
-          },
+    final Color contentColor = _state == BluetoothDeviceState.CONNECTED
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.onSurface;
+    final Widget icon = CircleAvatar(
+      child: getDeviceIcon(
+        _device,
+        size: const Size.fromRadius(12),
+        color: theme.colorScheme.onPrimary,
+      ),
+    );
+    final Widget from = ListTileTheme(
+      textColor: contentColor,
+      iconColor: contentColor,
+      child: ListTile(
+        leading: icon,
+        title: Text(_device.name),
+        subtitle: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_device.address),
+            SvgPicture.string(_svgDot, color: contentColor),
+            _buildState(),
+          ],
         ),
+        trailing: _buildTrailing(),
+      ),
+    );
+    /*
+    final Widget to = Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+    );*/
+    final Widget to = ControllerWidget(device: _device);
+    return _buildContainer(context, from, to);
+  }
+
+  Widget _buildContainer(BuildContext context, Widget from, Widget to) {
+    return OpenContainer(
+      tappable: true,
+      transitionDuration: kDuration,
+      closedShape: _cardBorder,
+      closedColor: _color.evaluate(_curve),
+      closedElevation: 0,
+      closedBuilder: (_, __) {
+        //print('closedBuilder');
+        return from;
+      },
+      openBuilder: (c, __) {
+        //print('openBuilder');
+        return to;
+      },
+    );
+  }
+
+  Widget _buildState() {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, __) => Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          Opacity(
+            opacity: 1 - _curve.value,
+            child: Text(_lastState),
+          ),
+          Opacity(
+            opacity: _curve.value,
+            child: Text(_thisState),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrailing() {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, __) => Stack(
+        alignment: Alignment.center,
+        children: [
+          Opacity(
+            opacity: 1 - _curve.value,
+            child: _lastTailing,
+          ),
+          Opacity(
+            opacity: _curve.value,
+            child: _thisTailing,
+          ),
+        ],
       ),
     );
   }

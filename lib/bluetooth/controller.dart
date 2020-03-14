@@ -1,12 +1,12 @@
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:joycon/bluetooth/bluetooth.dart';
 
 class Controller {
   static const MethodChannel _controllerChannel =
       const MethodChannel('com.mumumusuc.libjoycon/controller');
+
   //static SendPort sendPort;
   final BluetoothDevice device;
 
@@ -57,14 +57,17 @@ class Controller {
         .invokeMethod(method, args)
         .then((v) => v as T)
         .catchError((e) {
+      print(e);
+      /*
       Fluttertoast.showToast(
-        msg: '${e}',
+        msg: e?.toString() ?? '',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIos: 1,
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );
+           */
     });
   }
 

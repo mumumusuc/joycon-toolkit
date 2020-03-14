@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Locale locale = Locale('en', '');
     return MultiProvider(
       providers: Bloc.providers,
       child: Consumer<AppConfig>(
@@ -35,7 +36,7 @@ class MyApp extends StatelessWidget {
             theme: config.lightTheme,
             darkTheme: config.darkTheme,
             themeMode: ThemeMode.system,
-            locale: Locale('zh', ''),
+            //locale: locale,
             localizationsDelegates: [
               S.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -44,7 +45,7 @@ class MyApp extends StatelessWidget {
             ],
             supportedLocales: S.delegate.supportedLocales,
             localeResolutionCallback:
-                S.delegate.resolution(fallback: Locale('zh', '')),
+                S.delegate.resolution(fallback: locale, withCountry: false),
             initialRoute: '/',
             onGenerateInitialRoutes: (p) => [
               MaterialPageRoute(

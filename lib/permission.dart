@@ -52,7 +52,10 @@ Future<PermissionStatus> _requestLocationPermission() {
 }
 
 Future<ServiceStatus> _getLocationServiceStatus() {
-  return PermissionHandler().checkServiceStatus(PermissionGroup.location);
+  return _isAndroidQ().then((Q) {
+    if (!Q) return ServiceStatus.enabled;
+    return PermissionHandler().checkServiceStatus(PermissionGroup.location);
+  });
 }
 
 Future<ServiceStatus> _requestLocationService() async {
@@ -230,7 +233,7 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
     );
   }
 
-  TextStyle get _hyperLinkTextStyle => const TextStyle(
+  TextStyle get hyperLinkTextStyle => const TextStyle(
         fontStyle: FontStyle.italic,
         color: Colors.blue,
         decoration: TextDecoration.underline,
@@ -252,7 +255,7 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
           children: [
             TextSpan(
                 text: 'ACCESS_FINE_LOCATION',
-                style: _hyperLinkTextStyle,
+                style: hyperLinkTextStyle,
                 recognizer: TapGestureRecognizer()
                   ..onTap = () async {
                     if (await canLaunch(_permissionUrl)) launch(_permissionUrl);
@@ -290,7 +293,7 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
           children: [
             TextSpan(
               text: S.of(context).perm_service_2,
-              style: _hyperLinkTextStyle,
+              style: hyperLinkTextStyle,
               recognizer: TapGestureRecognizer()
                 ..onTap = () async {
                   if (await canLaunch(_locationUrl)) launch(_locationUrl);

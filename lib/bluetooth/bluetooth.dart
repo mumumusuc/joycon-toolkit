@@ -25,7 +25,29 @@ enum BluetoothDeviceState {
   CONNECTED,
 }
 
-enum DeviceCategory { ProController, JoyCon_L, JoyCon_R, JoyCon_Dual }
+class DeviceCategory {
+  final int _value;
+
+  int get index => _value;
+
+  const DeviceCategory._(this._value);
+
+  factory DeviceCategory.byName(String name) {
+    final int index = names.indexOf(name);
+    if (index < 0) throw ArgumentError.value(name);
+    return values[index];
+  }
+
+  static const ProController = const DeviceCategory._(0);
+  static const JoyCon_L = const DeviceCategory._(1);
+  static const JoyCon_R = const DeviceCategory._(2);
+  static const JoyCon_Dual = const DeviceCategory._(3);
+  static const values = [ProController, JoyCon_L, JoyCon_R, JoyCon_Dual];
+  static const names = ['Pro Controller', 'Joy-Con (L)', 'Joy-Con (R)', 'TBD'];
+
+  @override
+  String toString() => names[_value];
+}
 
 typedef _OnAdapterStateChanged = void Function(BluetoothState state);
 typedef _OnDeviceStateChanged = void Function(
@@ -63,24 +85,15 @@ class BluetoothDevice {
   final String name;
   final String address;
 
-  const BluetoothDevice({this.name, this.address});
+  const BluetoothDevice({@required this.name, @required this.address})
+      : assert(name != null),
+        assert(address != null);
 
   factory BluetoothDevice.fromMap(Map<dynamic, dynamic> data) {
     return BluetoothDevice(name: data["name"], address: data["address"]);
   }
 
-  DeviceCategory get category {
-    switch (name) {
-      case 'Pro Controller':
-        return DeviceCategory.ProController;
-      case 'Joy-Con (L)':
-        return DeviceCategory.JoyCon_L;
-      case 'Joy-Con (R)':
-        return DeviceCategory.JoyCon_R;
-      default:
-        throw ArgumentError.value(name);
-    }
-  }
+  DeviceCategory get category => DeviceCategory.byName(name);
 
   @override
   bool operator ==(dynamic other) {

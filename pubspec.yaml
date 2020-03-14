@@ -11,7 +11,7 @@ description: A new Flutter application.
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.0+2
+version: 1.0.0+4
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
@@ -30,8 +30,9 @@ dependencies:
   fluttertoast: ^3.1.3
   url_launcher: ^5.4.2
   flutter_colorpicker: ^0.3.2
-  flutter_svg: ^0.17.2
+  flutter_svg: ^0.17.3
   android_intent: ^0.3.5+1
+  animations: ^1.0.0+5
 
 dev_dependencies:
   flutter_test:
@@ -86,23 +87,4 @@ flutter:
 
   assets:
     - assets/xwzh.jcm
-    - assets/image/icon.png
-    - assets/image/pro_controller.png
-    - assets/image/pro_controller_icon.png
-    - assets/image/joycon_d.png
-    - assets/image/joycon_d_icon.png
-    - assets/image/joycon_l.png
-    - assets/image/joycon_l_icon.png
-    - assets/image/joycon_l_outline.png
-    - assets/image/joycon_l_button.png
-    - assets/image/joycon_r.png
-    - assets/image/joycon_r_icon.png
-    - assets/image/joycon_r_outline.png
-    - assets/image/joycon_r_button.png
-    - assets/image/pro_controller_body.png
-    - assets/image/pro_controller_button.png
-    - assets/image/pro_controller_outline.png
-    - assets/image/pro_controller_body_outline.png
-    - assets/image/pro_controller_grip_left.png
-    - assets/image/pro_controller_grip_right.png
-    - assets/image/empty.svg
+    - assets/image/
