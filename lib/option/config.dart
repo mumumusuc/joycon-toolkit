@@ -91,8 +91,8 @@ class AppConfig with ChangeNotifier {
       showOffscreenLayersCheckerboard: showOffscreenLayersCheckerboard ??
           this.showOffscreenLayersCheckerboard,
       showPerformanceOverlay:
-          showOffscreenLayersCheckerboard ?? this.showPerformanceOverlay,
-      showRasterCacheImagesCheckerboard: showOffscreenLayersCheckerboard ??
+          showPerformanceOverlay ?? this.showPerformanceOverlay,
+      showRasterCacheImagesCheckerboard: showRasterCacheImagesCheckerboard ??
           this.showRasterCacheImagesCheckerboard,
     );
   }
@@ -102,17 +102,20 @@ final defaultConfig = AppConfig(
   lightTheme: _build(
     Brightness.light,
     Colors.purple,
-    Colors.white,
+    Colors.indigoAccent,
   ),
   darkTheme: _build(
     Brightness.dark,
-    Colors.purple,
-    Colors.black,
+    Colors.deepPurple,
+    Colors.deepOrangeAccent,
   ),
   timeDilate: false,
   textScaleFactor: allTextScaleValues[2],
-  showPerformanceOverlay: false,
   debug: false,
+);
+
+final defaultConfigDebug = defaultConfig.copyWith(
+  showPerformanceOverlay: true,
 );
 
 ThemeData buildTheme(Brightness brightness, Color primary, Color accent) =>

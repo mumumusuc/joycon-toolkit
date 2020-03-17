@@ -1,43 +1,59 @@
+library device;
+
+import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
+    as ext;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:provider/provider.dart';
-import '../bloc.dart';
-import '../bluetooth/bluetooth.dart';
-import '../bluetooth/controller.dart';
-import '../generated/i18n.dart';
-import '../widgets/color.dart';
-import '../widgets/device.dart';
-import '../widgets/light.dart';
-import '../widgets/rumble.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:async';
+import 'bloc.dart';
+import 'bluetooth/bluetooth.dart';
+import 'bluetooth/controller.dart';
+import 'generated/i18n.dart';
 
-class ControllerWidget extends StatelessWidget {
+part 'device/general.dart';
+
+part 'device/light.dart';
+
+part 'device/rumble.dart';
+
+part 'device/color.dart';
+
+const double _kTabbarHeight = 48;
+
+class DeviceWidget extends StatelessWidget {
   final BluetoothDevice device;
   final List<_WidgetHolder> _slivers = [
     _WidgetHolder(
       nameBuilder: (c) => S.of(c).bottom_label_general,
-      icon: const Icon(Icons.perm_device_information),
-      builder: (c) => DeviceWidget(c),
+      iconData: Icons.perm_device_information,
+      builder: (c) => _GeneralWidget(c),
     ),
     _WidgetHolder(
       nameBuilder: (c) => S.of(c).bottom_label_rumble,
-      icon: const Icon(Icons.vibration),
-      builder: (c) => RumbleWidget(c),
+      iconData: Icons.vibration,
+      builder: (c) => _RumbleWidget(c),
     ),
     _WidgetHolder(
       nameBuilder: (c) => S.of(c).bottom_label_light,
-      icon: const Icon(Icons.highlight),
-      builder: (c) => LightWidget(c),
+      iconData: Icons.highlight,
+      builder: (c) => _LightWidget(c),
     ),
     _WidgetHolder(
       nameBuilder: (c) => S.of(c).bottom_label_color,
-      icon: const Icon(Icons.color_lens),
-      builder: (c) => ColorWidget(c),
+      iconData: Icons.color_lens,
+      builder: (c) => _ColorWidget(c),
     ),
   ];
   final ValueNotifier<int> _index = ValueNotifier(0);
   final PageController _controller = PageController();
 
-  ControllerWidget({Key key, @required this.device}) : super(key: key);
+  DeviceWidget({Key key, @required this.device}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -67,64 +83,47 @@ class ControllerWidget extends StatelessWidget {
   }
 
   Widget _build(BuildContext context) {
-    //print('build controller body');
-    final ThemeData theme = Theme.of(context);
+    print('build controller body');
     return Scaffold(
-      bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
-        notchMargin: 0.0,
-        child: Consumer<int>(
-          builder: (context, index, _) {
-            return BottomNavigationBar(
-              selectedItemColor: Theme.of(context).primaryColor,
-              unselectedItemColor: Theme.of(context).unselectedWidgetColor,
-              currentIndex: index,
-              onTap: (i) {
-                _controller.animateToPage(
-                  i,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              items: _slivers.map((e) {
-                return BottomNavigationBarItem(
-                  title: Text(e.getName(context)),
-                  icon: e.icon,
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, _) {
-          final ThemeData theme = Theme.of(context);
+      body: ext.NestedScrollView(
+        pinnedHeaderSliverHeightBuilder: () =>
+            _kTabbarHeight + MediaQuery.of(context).padding.top,
+        headerSliverBuilder: (context, innerScrolled) {
+          //final ThemeData theme = Theme.of(context);
           return [
             SliverAppBar(
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              iconTheme: theme.iconTheme,
-              textTheme: theme.textTheme,
               title: Text(device.name),
               centerTitle: true,
               floating: true,
-              snap: true,
+              pinned: true,
+              //snap: true,
+              forceElevated: innerScrolled,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.pop(context),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(_kTabbarHeight),
+                child: _buildIndicator(context),
               ),
             ),
           ];
         },
         body: Consumer<Controller>(
-          builder: (_, controller, __) {
+          builder: (context, controller, __) {
             return PageView(
               controller: _controller,
               //scrollDirection: Axis.vertical,
               children: _slivers.map((e) {
                 return AliveWidgetBuilder(
-                  child: SingleChildScrollView(
-                    child: e.builder(controller),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: kPageConstraint,
+                      child: SingleChildScrollView(
+                        child: e.builder(controller),
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
@@ -132,6 +131,43 @@ class ControllerWidget extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildIndicator(BuildContext context) {
+    return Container(
+      height: _kTabbarHeight,
+      constraints: kPageConstraint,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      child: Consumer<int>(
+        builder: (context, index, _) {
+          return GNav(
+            gap: 8,
+            selectedIndex: index,
+            color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.3),
+            activeColor: Theme.of(context).colorScheme.onPrimary,
+            iconSize: 20,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            duration: kDuration,
+            //backgroundColor: Theme.of(context).primaryColor,
+            tabBackgroundColor: Theme.of(context).colorScheme.primaryVariant,
+            tabs: _slivers.map((e) {
+              return GButton(
+                text: e.getName(context),
+                icon: e.iconData,
+              );
+            }).toList(),
+            onTabChange: (i) {
+              _controller.animateToPage(
+                i,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -175,7 +211,7 @@ class ControllerWidget extends StatelessWidget {
                               child: Text(S.of(context).action_ok),
                               onPressed: () {
                                 Navigator.popUntil(
-                                    context, ModalRoute.withName('/'));
+                                    context, ModalRoute.withName('/home'));
                               },
                             ),
                           ),
@@ -207,19 +243,27 @@ typedef _NameBuilder = String Function(BuildContext);
 
 class _WidgetHolder {
   final String _name;
-  final Widget icon;
+  final Widget _icon;
+  final IconData iconData;
   final _NameBuilder _nameBuilder;
   final _ControllerBuilder builder;
 
   const _WidgetHolder(
-      {String name, _NameBuilder nameBuilder, this.icon, this.builder})
+      {String name,
+      _NameBuilder nameBuilder,
+      Widget icon,
+      this.iconData,
+      this.builder})
       : assert(name != null || nameBuilder != null),
-        assert(icon != null),
+        assert(icon != null || iconData != null),
         assert(builder != null),
         _name = name,
+        _icon = icon,
         _nameBuilder = nameBuilder;
 
   String getName(BuildContext context) => _name ?? _nameBuilder(context);
+
+  Widget get icon => _icon ?? Icon(iconData);
 }
 
 class DialogRoute<T> extends PopupRoute<T> {
@@ -312,5 +356,28 @@ class _AliveWidgetState extends State<AliveWidget>
   Widget build(BuildContext context) {
     super.build(context);
     return widget.build(context);
+  }
+}
+
+class _StickyBarDelegate extends SliverPersistentHeaderDelegate {
+  final PreferredSizeWidget child;
+
+  const _StickyBarDelegate({@required this.child});
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return this.child;
+  }
+
+  @override
+  double get maxExtent => child.preferredSize.height;
+
+  @override
+  double get minExtent => child.preferredSize.height;
+
+  @override
+  bool shouldRebuild(SliverPersistentHeaderDelegate oldDelegate) {
+    return false;
   }
 }

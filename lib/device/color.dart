@@ -1,19 +1,14 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:joycon/bluetooth/controller.dart';
-import 'package:provider/provider.dart';
+part of device;
 
 const double _maxWidth = 350;
 const double _maxHeight = 350;
 const double _minWidth = 300;
 const double _minHeight = 300;
 
-class ColorWidget extends StatelessWidget {
+class _ColorWidget extends StatelessWidget {
   final Controller controller;
 
-  const ColorWidget(this.controller, {Key key}) : super(key: key);
+  const _ColorWidget(this.controller, {Key key}) : super(key: key);
 
   int get _index => controller.category.index;
 
@@ -207,6 +202,56 @@ class ColorWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildControllerStack2(BuildContext context) {
+    final Color bgColor = Theme.of(context).cardColor;
+    final List<Widget> children = [
+      SvgPicture.asset(
+        _OutlineAssets[_index],
+        color: Color(Colors.white.value - bgColor.value).withOpacity(1),
+      ),
+      Selector<ValueNotifier<_Profile>, Color>(
+        selector: (c, p) => p.value.body,
+        builder: (_, color, child) {
+          return SvgPicture.asset(_BodyAssets[_index], color: color);
+        },
+      ),
+      Selector<ValueNotifier<_Profile>, Color>(
+        selector: (c, p) => p.value.button,
+        builder: (_, color, child) {
+          return SvgPicture.asset(_ButtonAssets[_index], color: color);
+        },
+      ),
+    ];
+    if (_index == 0) {
+      children.addAll([
+        Selector<ValueNotifier<_Profile>, Color>(
+          selector: (c, p) => p.value.leftGrip,
+          builder: (_, color, child) {
+            return SvgPicture.asset(_LeftGripAssets[_index], color: color);
+          },
+        ),
+        Selector<ValueNotifier<_Profile>, Color>(
+          selector: (c, p) => p.value.rightGrip,
+          builder: (_, color, child) {
+            return SvgPicture.asset(_RightGripAssets[_index], color: color);
+          },
+        ),
+      ]);
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxWidth: _maxWidth,
+        maxHeight: _maxHeight,
+        minWidth: _minWidth,
+        minHeight: _minHeight,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: children,
+      ),
+    );
+  }
+
   Widget _buildColorCard2(BuildContext context) {
     final List<Widget> children = [
       Selector<ValueNotifier<_Profile>, Color>(
@@ -328,7 +373,7 @@ class ColorWidget extends StatelessWidget {
           const Divider(height: 3),
           Padding(
             padding: const EdgeInsets.all(8),
-            child: _buildControllerStack(context),
+            child: _buildControllerStack2(context),
           ),
           const Divider(),
           GridView(

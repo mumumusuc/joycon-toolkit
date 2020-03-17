@@ -1,19 +1,16 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:joycon/bluetooth/controller.dart';
-import 'package:provider/provider.dart';
+part of device;
 
 typedef _Select = int Function(HomeLightPattern);
 typedef _Notify = void Function(_PatternNotifier, int);
 
-class LightWidget extends StatelessWidget {
+class _LightWidget extends StatelessWidget {
   static const List<HomeLightPattern> _patterns = const [_breath, _blink];
   static List<int> _range_0F = List.generate(16, (i) => i);
   final ValueNotifier<int> _player = ValueNotifier(0);
   final ValueNotifier<int> _flash = ValueNotifier(0);
   final Controller controller;
 
-  LightWidget(this.controller, {Key key}) : super(key: key);
+  _LightWidget(this.controller, {Key key}) : super(key: key);
 
   Widget _buildPlayerLightCard(BuildContext context) {
     return Card(

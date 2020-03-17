@@ -1,12 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:joycon/bluetooth/bluetooth.dart';
-import 'package:joycon/bluetooth/controller.dart';
+part of device;
 
-class DeviceWidget extends StatelessWidget {
+class _GeneralWidget extends StatelessWidget {
   final Controller controller;
 
-  const DeviceWidget(this.controller, {Key key}) : super(key: key);
+  const _GeneralWidget(this.controller, {Key key}) : super(key: key);
 
   Widget _buildStateText(BuildContext context, String label, String value) {
     return Padding(

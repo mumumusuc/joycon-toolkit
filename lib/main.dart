@@ -1,14 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'bloc.dart';
-import 'home.dart';
+import 'home2.dart';
 import 'option/config.dart';
-import 'widgets/controller.dart';
-
 import 'generated/i18n.dart';
+import 'splash.dart';
 
 void main() {
   // See https://github.com/flutter/flutter/wiki/Desktop-shells#target-platform-override
@@ -46,29 +48,43 @@ class MyApp extends StatelessWidget {
             supportedLocales: S.delegate.supportedLocales,
             localeResolutionCallback:
                 S.delegate.resolution(fallback: locale, withCountry: false),
-            initialRoute: '/',
-            onGenerateInitialRoutes: (p) => [
-              MaterialPageRoute(
-                settings: RouteSettings(name: p),
-                builder: (_) => HomePage(),
-              ),
-            ],
+            initialRoute: Platform.isAndroid ? '/home' : '/home/splash',
+            onGenerateInitialRoutes: (p) {
+              final List<Route> routes = [];
+              final parts = p.split('/');
+              print(parts);
+              parts.forEach((e) {
+                if (e == 'home')
+                  routes.add(
+                    MaterialPageRoute(
+                      settings: RouteSettings(name: p),
+                      builder: (_) => HomePage(),
+                    ),
+                  );
+                else if (e == 'splash') routes.add(SplashRoute());
+              });
+              return routes;
+            },
             onGenerateRoute: (settings) {
               switch (settings.name) {
-                case '/device':
+                case '/':
+                case '/home':
                   return MaterialPageRoute(
+                    builder: (_) => HomePage(),
                     settings: settings,
-                    builder: (_) =>
-                        ControllerWidget(device: settings.arguments),
                   );
                 default:
-                  break;
+                  return null;
               }
-              return null;
             },
+/*
             builder: (context, child) {
-              return Scaffold(body: SafeArea(child: child));
+              return Container(
+                color: Theme.of(context).primaryColor,
+                child: SafeArea(child: child),
+              );
             },
+ */
           );
         },
       ),

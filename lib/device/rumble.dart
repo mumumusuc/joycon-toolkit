@@ -1,14 +1,8 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:joycon/bluetooth/bluetooth.dart';
-import 'package:joycon/bluetooth/controller.dart';
-import 'package:provider/provider.dart';
+part of device;
 
 typedef OnSaved = void Function(String);
 
-class RumbleWidget extends StatelessWidget {
+class _RumbleWidget extends StatelessWidget {
   static const List<String> _musics = const [
     'custom',
     'Zelda main theme.mp3',
@@ -20,7 +14,7 @@ class RumbleWidget extends StatelessWidget {
   final List<double> _data_r = List(4);
   final Controller controller;
 
-  RumbleWidget(this.controller, {Key key}) : super(key: key);
+  _RumbleWidget(this.controller, {Key key}) : super(key: key);
 
   Widget _buildLimitedInput(String label, int limit, OnSaved onSaved,
       {num defaultValue}) {

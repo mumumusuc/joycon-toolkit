@@ -173,8 +173,14 @@ class BluetoothDeviceMap {
   Iterable<MapEntry<BluetoothDevice, BluetoothDeviceMeta>> get devices =>
       _data.entries;
 
-  BluetoothDeviceMeta operator [](BluetoothDevice device) {
-    return _data[device];
+  BluetoothDeviceMeta operator [](dynamic device) {
+    if (device is int) {
+      return devices.elementAt(device).value;
+    }
+    if (device is BluetoothDevice) {
+      return _data[device];
+    }
+    throw FormatException('Unsupported paramater type ${device.runtimeType}');
   }
 
   bool _append(Map<BluetoothDevice, BluetoothDeviceMeta> data) {
@@ -265,22 +271,22 @@ String selectDeviceIcon(BluetoothDevice device) {
 Widget getDeviceIcon(BluetoothDevice device, {Size size, Color color}) {
   switch (device.category) {
     case DeviceCategory.ProController:
-      return SvgPicture.asset(
-        'assets/image/pro_controller.svg',
+      return Image.asset(
+        'assets/image/pro_controller_icon.png',
         width: size?.width,
         height: size?.height,
         color: color,
       );
     case DeviceCategory.JoyCon_L:
-      return SvgPicture.asset(
-        'assets/image/joycon_l.svg',
+      return Image.asset(
+        'assets/image/joycon_l_icon.png',
         width: size?.width,
         height: size?.height,
         color: color,
       );
     case DeviceCategory.JoyCon_R:
-      return SvgPicture.asset(
-        'assets/image/joycon_r.svg',
+      return Image.asset(
+        'assets/image/joycon_r_icon.png',
         width: size?.width,
         height: size?.height,
         color: color,
@@ -299,7 +305,8 @@ Widget getDeviceIcon(BluetoothDevice device, {Size size, Color color}) {
 
 //
 const double kPageMaxWidth = 500;
-const Duration kDuration = const Duration(milliseconds: 600);
+const BoxConstraints kPageConstraint = BoxConstraints(maxWidth: kPageMaxWidth);
+const Duration kDuration = const Duration(milliseconds: 400);
 const Color kDividerColor = const Color(0x07444444);
 const BorderSide kDividerBorderSide =
     const BorderSide(color: kDividerColor, width: 0);

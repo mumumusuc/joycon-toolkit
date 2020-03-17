@@ -42,7 +42,7 @@ class _HomePageState extends PermissionState<HomePage> {
         title: Text(S.of(context).app_title),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => SystemNavigator.pop(animated: true),
@@ -60,11 +60,11 @@ class _HomePageState extends PermissionState<HomePage> {
           constraints: BoxConstraints.loose(
             const Size.fromWidth(kPageMaxWidth),
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Selector<BluetoothState, bool>(
+          child: CustomScrollView(
+            shrinkWrap: true,
+            slivers: [
+              SliverToBoxAdapter(
+                child: Selector<BluetoothState, bool>(
                   selector: (_, s) => s != BluetoothState.DISABLED,
                   builder: (context, hide, child) {
                     return FadeWidget(
@@ -73,45 +73,52 @@ class _HomePageState extends PermissionState<HomePage> {
                     );
                   },
                 ),
-                buildPermissionBanner(
+              ),
+              SliverToBoxAdapter(
+                child: buildPermissionBanner(
                   container: (child) => Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [const Divider(height: 3), child],
                   ),
                 ),
-                buildServiceBanner(
+              ),
+              SliverToBoxAdapter(
+                child: buildServiceBanner(
                   container: (child) => Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [const Divider(height: 3), child],
                   ),
                 ),
-                const Divider(),
-                Selector<BluetoothDeviceMap, int>(
+              ),
+              const SliverToBoxAdapter(child: const Divider()),
+              SliverPadding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                sliver: Selector<BluetoothDeviceMap, int>(
                   selector: (context, map) => map.devices.length,
                   builder: (context, length, child) {
-                    return _ListWidget(
-                      children: length == 0
-                          ? null
-                          : BluetoothDeviceMap.of(context)
-                              .devices
-                              .map<Widget>((it) {
-                              return Selector<BluetoothDeviceMap,
-                                  BluetoothDeviceMeta>(
-                                selector: (context, map) => map[it.key],
-                                builder: (context, meta, child) {
-                                  print('build device selector');
-                                  return Padding(
-                                    padding: const EdgeInsets.all(4),
-                                    child: _DeviceCard(it.key, meta),
-                                  );
-                                },
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          return Selector<BluetoothDeviceMap, dynamic>(
+                            selector: (context, map) =>
+                                map.devices.elementAt(index),
+                            builder: (context, data, child) {
+                              print('build device selector');
+                              return Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: _DeviceCard(data.key, data.value),
                               );
-                            }).toList(),
+                            },
+                          );
+                        },
+                        childCount: length,
+                        //addRepaintBoundaries: false,
+                      ),
                     );
                   },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -341,12 +348,14 @@ class _DeviceCard extends StatefulWidget {
 class _DeviceCardState extends State<_DeviceCard>
     with SingleTickerProviderStateMixin {
   AnimationController _controller;
+  Animation<double> _fadeIn, _fadeOut;
   CurvedAnimation _curve;
   ColorTween _color;
   String _lastState;
   String _thisState;
   Widget _lastTailing;
   Widget _thisTailing;
+  VoidCallback _open;
 
   BluetoothDevice get _device => widget.device;
 
@@ -422,6 +431,8 @@ class _DeviceCardState extends State<_DeviceCard>
     _controller = AnimationController(vsync: this, duration: kDuration);
     _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _color = ColorTween();
+    _fadeOut = Tween<double>(begin: 1, end: 0).animate(_curve);
+    _fadeIn = Tween<double>(begin: 0, end: 1).animate(_curve);
   }
 
   @override
@@ -487,11 +498,12 @@ class _DeviceCardState extends State<_DeviceCard>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(_device.address),
-            Icon(CommunityMaterialIcons.circle_small),
-            _buildState(),
+            Icon(CommunityMaterialIcons.circle_small, color: contentColor),
+            RepaintBoundary(child: _buildState()),
           ],
         ),
-        trailing: _buildTrailing(),
+        onTap: _open,
+        trailing: RepaintBoundary(child: _buildTrailing()),
       ),
     );
     final Widget to = DeviceWidget(device: _device);
@@ -500,13 +512,14 @@ class _DeviceCardState extends State<_DeviceCard>
 
   Widget _buildContainer(BuildContext context, Widget from, Widget to) {
     return OpenContainer(
-      tappable: true,
+      //tappable: true,
       transitionDuration: kDuration,
       closedShape: _cardBorder,
       closedColor: _color.evaluate(_curve),
       closedElevation: 0,
-      closedBuilder: (_, __) {
+      closedBuilder: (_, open) {
         //print('closedBuilder');
+        _open = open;
         return from;
       },
       openBuilder: (c, __) {
@@ -523,11 +536,11 @@ class _DeviceCardState extends State<_DeviceCard>
         alignment: Alignment.centerLeft,
         children: [
           FadeTransition(
-            opacity: Tween<double>(begin: 1, end: 0).animate(_curve),
+            opacity: _fadeOut,
             child: Text(_lastState),
           ),
           FadeTransition(
-            opacity: Tween<double>(begin: 0, end: 1).animate(_curve),
+            opacity: _fadeIn,
             child: Text(_thisState),
           ),
         ],
@@ -542,11 +555,11 @@ class _DeviceCardState extends State<_DeviceCard>
         alignment: Alignment.center,
         children: [
           FadeTransition(
-            opacity: Tween<double>(begin: 1, end: 0).animate(_curve),
+            opacity: _fadeOut,
             child: _lastTailing,
           ),
           FadeTransition(
-            opacity: Tween<double>(begin: 0, end: 1).animate(_curve),
+            opacity: _fadeIn,
             child: _thisTailing,
           ),
         ],

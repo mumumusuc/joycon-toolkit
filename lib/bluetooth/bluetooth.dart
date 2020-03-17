@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 enum BluetoothState {
   UNKNOWN,
@@ -209,14 +208,7 @@ class Bluetooth {
 
   void discovery(bool on) {
     _mc_bt.invokeMethod('discovery', {'on': on}).catchError((e) {
-      Fluttertoast.showToast(
-        msg: e.message,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIos: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
+      print(e);
     });
   }
 

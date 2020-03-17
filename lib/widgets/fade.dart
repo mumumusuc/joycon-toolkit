@@ -54,9 +54,12 @@ class _FadeWidgetState extends State<FadeWidget>
       animation: _controller,
       child: child,
       builder: (context, child) {
-        return _Fade(
-          heightFactor: _height.value,
-          child: child,
+        return FadeTransition(
+          opacity: _height,
+          child: _Fade(
+            heightFactor: _height.value,
+            child: child,
+          ),
         );
       },
     );
@@ -81,7 +84,7 @@ class _Fade extends SingleChildRenderObjectWidget {
   }
 }
 
-class _FadeRenderObject extends RenderOpacity {
+class _FadeRenderObject extends RenderProxyBox {
   double _heightFactor;
 
   _FadeRenderObject({
@@ -90,7 +93,7 @@ class _FadeRenderObject extends RenderOpacity {
   })  : assert(heightFactor != null),
         assert(heightFactor >= 0.0 && heightFactor <= 1.0),
         _heightFactor = heightFactor,
-        super(opacity: heightFactor, child: child);
+        super(child);
 
   double get heightFactor => _heightFactor;
 
@@ -99,7 +102,6 @@ class _FadeRenderObject extends RenderOpacity {
     assert(value >= 0.0 && value <= 1.0);
     if (_heightFactor == value) return;
     _heightFactor = value;
-    opacity = value;
     markNeedsLayout();
   }
 
