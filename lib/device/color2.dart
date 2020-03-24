@@ -1,7 +1,5 @@
 part of device;
 
-const double _maxHeight = 300;
-
 class _DeviceColor extends StatelessWidget {
   final Controller controller;
   final Size _viewPort;
@@ -14,9 +12,6 @@ class _DeviceColor extends StatelessWidget {
         _paths = _Paths[controller.category]
             .map((e) => parseSvgPathData(e))
             .toList(growable: false);
-
-  static ValueNotifier<_Profile> _getProfile(BuildContext context) =>
-      Provider.of<ValueNotifier<_Profile>>(context, listen: false);
 
   void _showBlockColorPicker(
       BuildContext context, String label, Color color, ValueChanged<Color> cb) {
@@ -79,71 +74,20 @@ class _DeviceColor extends StatelessWidget {
     );
   }
 
-  Widget _buildPickerButton(
-      BuildContext context, String label, Color color, ValueChanged<Color> cb) {
-    Color foregroundColor =
-        ThemeData.estimateBrightnessForColor(color) == Brightness.light
-            ? Colors.black
-            : Colors.white;
-    TextTheme textTheme = Theme.of(context).textTheme;
-    return SizedBox(
-      height: kToolbarHeight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(4),
-            child: Text(label, style: textTheme.caption),
-          ),
-          Expanded(
-            child: Material(
-              color: color,
-              elevation: 0.2,
-              child: InkWell(
-                onTap: () => _showBlockColorPicker(context, label, color, cb),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '#${color.value.toRadixString(16)}'.toUpperCase(),
-                          style: textTheme.caption
-                              .copyWith(color: foregroundColor),
-                        ),
-                      ),
-                      IconButton(
-                        padding: const EdgeInsets.all(0),
-                        color: foregroundColor,
-                        iconSize: 20,
-                        icon: const Icon(Icons.colorize),
-                        onPressed: () =>
-                            _showDetailColorPicker(context, label, color, cb),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     print('_DeviceColor -> build');
     return ListenableProvider(
-      create: (_) => ValueNotifier(_Presets[controller.category][0]),
+      create: (_) => _ProfileNotifier(_Presets[controller.category][0]),
       dispose: (_, p) => p.dispose(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildProfileSelector(context),
-          const Divider(height: 1),
+          kPixelDivider,
           _buildControllerStack(context),
+          //kPixelDivider,
+          _buildPickerRow(context),
         ],
       ),
     );
@@ -152,7 +96,7 @@ class _DeviceColor extends StatelessWidget {
   Widget _buildProfileSelector(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.palette),
-      title: Consumer<ValueNotifier<_Profile>>(
+      title: Consumer<_ProfileNotifier>(
         child: Text(S.of(context).custom),
         builder: (context, profile, child) {
           _Profile value = profile.value;
@@ -168,7 +112,7 @@ class _DeviceColor extends StatelessWidget {
       trailing: IconButton(
         icon: const Icon(Icons.send),
         onPressed: () {
-          final _Profile p = _getProfile(context).value;
+          final _Profile p = _ProfileNotifier.of(context).value;
           if (p.code != null)
             controller.setColor(p.code, _none, _none, _none);
           else
@@ -189,9 +133,8 @@ class _DeviceColor extends StatelessWidget {
         break;
     }
     return RepaintBoundary(
-      child: Consumer<ValueNotifier<_Profile>>(
+      child: Consumer<_ProfileNotifier>(
         builder: (context, profile, _) {
-          print('Consumer build');
           return AspectRatio(
             aspectRatio: 1.5,
             child: CustomPaint(
@@ -200,6 +143,113 @@ class _DeviceColor extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildPickerRow(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final S s = S.of(context);
+    return SizedBox(
+      height: kToolbarHeight,
+      child: Row(
+        children: [
+          if (controller.category == DeviceCategory.ProController)
+            Expanded(
+              child: Selector<_ProfileNotifier, Color>(
+                selector: (_, p) => p.value.leftGrip,
+                builder: (context, color, _) => _buildPickerButton(
+                  context,
+                  s.profile_left_grip,
+                  color,
+                  (v) => _ProfileNotifier.of(context).updateWith(leftGrip: v),
+                ),
+              ),
+            ),
+          //kPixelDividerVertical,
+          Expanded(
+            child: Selector<_ProfileNotifier, Color>(
+              selector: (_, p) => p.value.body,
+              builder: (context, color, _) => _buildPickerButton(
+                context,
+                s.profile_body,
+                color,
+                (v) => _ProfileNotifier.of(context).updateWith(body: v),
+                theme,
+              ),
+            ),
+          ),
+          //kPixelDividerVertical,
+          Expanded(
+            child: Selector<_ProfileNotifier, Color>(
+              selector: (_, p) => p.value.button,
+              builder: (context, color, _) => _buildPickerButton(
+                context,
+                s.profile_button,
+                color,
+                (v) => _ProfileNotifier.of(context).updateWith(button: v),
+                theme,
+              ),
+            ),
+          ),
+          //kPixelDividerVertical,
+          if (controller.category == DeviceCategory.ProController)
+            Expanded(
+              child: Selector<_ProfileNotifier, Color>(
+                selector: (_, p) => p.value.rightGrip,
+                builder: (context, color, _) => _buildPickerButton(
+                  context,
+                  s.profile_right_grip,
+                  color,
+                  (v) => _ProfileNotifier.of(context).updateWith(rightGrip: v),
+                  theme,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPickerButton(
+    BuildContext context,
+    String label,
+    Color color,
+    ValueChanged<Color> onChanged, [
+    ThemeData theme,
+  ]) {
+    final TextTheme textTheme = (theme ?? Theme.of(context)).textTheme;
+    Color foregroundColor =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.light
+            ? Colors.black
+            : Colors.white;
+    return Material(
+      color: color,
+      child: InkWell(
+        onTap: () => _showBlockColorPicker(context, label, color, onChanged),
+        child: Container(
+          height: double.infinity,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.all(4),
+          child: Text.rich(
+            TextSpan(
+              text: '$label\n',
+              style: textTheme.caption.copyWith(color: foregroundColor),
+              children: [
+                TextSpan(
+                  text: color.value
+                      .toRadixString(16)
+                      .toUpperCase()
+                      .replaceFirst('FF', '#'),
+                  style: textTheme.button.copyWith(
+                    color: foregroundColor,
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -352,6 +402,27 @@ class _Profile {
 
   @override
   String toString() => name;
+}
+
+class _ProfileNotifier extends ValueNotifier<_Profile> {
+  _ProfileNotifier(_Profile value) : super(value);
+
+  void updateWith({
+    Color body,
+    Color button,
+    Color leftGrip,
+    Color rightGrip,
+  }) {
+    value = value.copyWith(
+      body: body,
+      button: button,
+      leftGrip: leftGrip,
+      rightGrip: rightGrip,
+    );
+  }
+
+  static _ProfileNotifier of(BuildContext context) =>
+      Provider.of<_ProfileNotifier>(context, listen: false);
 }
 
 const List<_Profile> _JcPresets = [

@@ -20,6 +20,8 @@ const Duration kDuration = const Duration(milliseconds: 400);
 const Color kDividerColor = const Color(0xFFBDBDBD);
 const BorderSide kDividerBorderSide =
     const BorderSide(color: kDividerColor, width: 0);
+const Widget kPixelDivider = const Divider(height: 1);
+const Widget kPixelDividerVertical = const VerticalDivider(width: 1);
 final Map<Locale, String> kLanguages = {
   Locale("en", ""): "English",
   Locale("zh", ""): "简体中文",
@@ -160,11 +162,15 @@ class DeviceType {
   factory DeviceType.of(BuildContext context) =>
       DeviceType._(MediaQuery.of(context).size);
 
-  bool get isPhone => size.width < kPageMaxWidth;
+  bool get isPhone => size.width < PhoneThreshold;
 
-  bool get isTable => size.width < 1200 && !isPhone;
+  bool get isTable => size.width < TabletThreshold && !isPhone;
 
-  bool get isDesktop => size.width >= 1200;
+  bool get isDesktop => size.width >= DesktopThreshold;
+
+  static const double PhoneThreshold = 600;
+  static const double TabletThreshold = 900;
+  static const double DesktopThreshold = 1200;
 }
 
 class BluetoothDeviceRecord {

@@ -37,5 +37,9 @@
   "option_text_scale_desc": "select text scale",
   "action_settings": "Settings",
   "action_about": "About",
-  "custom": "Custom"
+  "custom": "Custom",
+  "profile_body": "Body",
+  "profile_button": "Button",
+  "profile_left_grip": "Left grip",
+  "profile_right_grip": "Right grip"
 }

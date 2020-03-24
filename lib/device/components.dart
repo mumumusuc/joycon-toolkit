@@ -43,21 +43,32 @@ class _DeviceInfo extends StatelessWidget {
   }
 }
 
-class _DeviceButton extends _Unimplemented {}
+class _DeviceButton extends _Unimplemented {
+  @override
+  String get title => 'Button';
+}
 
-class _DeviceAxes extends _Unimplemented {}
+class _DeviceAxes extends _Unimplemented {
+  @override
+  String get title => 'Axes';
+}
 
-class _DeviceMemory extends _Unimplemented {}
+class _DeviceMemory extends _Unimplemented {
+  @override
+  String get title => 'Memory';
+}
 
-class _Unimplemented extends StatelessWidget {
+abstract class _Unimplemented extends StatelessWidget {
+  String get title;
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        ListTile(title: Text('$title (unimplemented)')),
+        const Divider(height: 1),
         SvgPicture.asset('assets/image/empty.svg'),
-        Text('Unimplemented'),
-        const SizedBox(height: 36),
       ],
     );
   }

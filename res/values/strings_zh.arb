@@ -37,5 +37,9 @@
   "option_text_scale_desc": "选择文字缩放",
   "action_settings": "设置",
   "action_about": "关于",
-  "custom": "自定义"
+  "custom": "自定义",
+  "profile_body": "主体",
+  "profile_button": "按键",
+  "profile_left_grip": "左握把",
+  "profile_right_grip": "右握把"
 }

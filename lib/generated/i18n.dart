@@ -55,6 +55,10 @@ class S implements WidgetsLocalizations {
   String get perm_service_1 => "Android 10 (or higher) need ";
   String get perm_service_2 => "ENABLE LOCATION";
   String get perm_service_3 => " to start bluetooth discovery.";
+  String get profile_body => "Body";
+  String get profile_button => "Button";
+  String get profile_left_grip => "Left grip";
+  String get profile_right_grip => "Right grip";
   String get theme_mode_dark => "Dark";
   String get theme_mode_light => "Light";
   String get theme_mode_system => "System";
@@ -93,6 +97,8 @@ class $zh extends S {
   @override
   String get theme_mode_dark => "暗色";
   @override
+  String get profile_body => "主体";
+  @override
   String get action_ok => "好";
   @override
   String get device_state_paired => "已配对";
@@ -111,6 +117,8 @@ class $zh extends S {
   @override
   String get bottom_label_color => "颜色";
   @override
+  String get profile_button => "按键";
+  @override
   String get option_text_scale => "文字缩放";
   @override
   String get custom => "自定义";
@@ -125,7 +133,11 @@ class $zh extends S {
   @override
   String get no_device => "未发现设备";
   @override
+  String get profile_right_grip => "右握把";
+  @override
   String get option_language => "语言";
+  @override
+  String get profile_left_grip => "左握把";
   @override
   String get action_dismiss => "忽略";
   @override
