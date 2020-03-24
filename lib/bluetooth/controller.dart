@@ -24,6 +24,10 @@ class Controller {
 
   const Controller._(this.device);
 
+  factory Controller.test(BluetoothDevice device) {
+    return Controller._(device);
+  }
+
   factory Controller(BluetoothDevice device) {
     return Controller._(device).._create(device);
   }
@@ -86,13 +90,13 @@ class Controller {
 
   void _create(BluetoothDevice device) {
     _invoke<String>('create', {'address': device.address}).then((value) {
-      assert(value == device.address);
+      //assert(value == device.address);
     });
   }
 
   void _destroy(BluetoothDevice device) {
     _invoke('destroy', {'address': device.address}).then((value) {
-      assert(value == device.address);
+      //assert(value == device.address);
     });
   }
 
@@ -224,4 +228,7 @@ class HomeLightPattern {
       cycles: cycles ?? this.cycles,
     );
   }
+
+  @override
+  String toString() => name;
 }

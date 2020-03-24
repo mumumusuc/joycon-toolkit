@@ -1,181 +1,195 @@
+library bloc;
+
 import 'dart:collection';
+import 'package:flutter/scheduler.dart' show timeDilation;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:joycon/bluetooth/bluetooth.dart';
-import 'package:joycon/bluetooth/controller.dart';
-import 'package:joycon/option/config.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:provider/single_child_widget.dart';
+import 'bluetooth/bluetooth.dart';
+import 'generated/i18n.dart';
 
-class Bloc with BluetoothCallbackMixin {
-  final Bluetooth bluetooth = Bluetooth();
-  final _BluetoothDeviceNotifier _devices = _BluetoothDeviceNotifier();
-  final ValueNotifier<BluetoothState> _adapter =
-      ValueNotifier(BluetoothState.UNKNOWN);
+part 'bloc/config.dart';
 
-  BluetoothDeviceMap get map => _devices.value;
+part 'bloc/scale.dart';
 
-  static Bloc of(BuildContext context) =>
-      Provider.of<Bloc>(context, listen: false);
+// globals
+const double kPageMaxWidth = 600;
+const BoxConstraints kPageConstraint = BoxConstraints(maxWidth: kPageMaxWidth);
+const Duration kDuration = const Duration(milliseconds: 400);
+const Color kDividerColor = const Color(0xFFBDBDBD);
+const BorderSide kDividerBorderSide =
+    const BorderSide(color: kDividerColor, width: 0);
+final Map<Locale, String> kLanguages = {
+  Locale("en", ""): "English",
+  Locale("zh", ""): "简体中文",
+};
 
-  Bloc._() {
+// bloc
+class BlocProvider extends StatelessWidget {
+  final Widget child;
+
+  const BlocProvider({this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ListenableProvider<Bloc>(
+          create: (c) => Bloc._(),
+          dispose: (_, v) => v.dispose(),
+        ),
+        ProxyProvider<Bloc, Config>(
+          update: (_, b, __) {
+            if (b.config.timeDilation)
+              timeDilation = 20;
+            else
+              timeDilation = 1;
+            return b.config;
+          },
+        ),
+        ProxyProvider<Bloc, BluetoothState>(
+          update: (_, b, __) => b.adapterState,
+        ),
+        ProxyProvider<Bloc, BluetoothDeviceRecord>(
+          update: (_, b, __) => b.record,
+        ),
+      ],
+      child: child,
+    );
+  }
+}
+
+class Bloc extends ChangeNotifier with BluetoothCallbackMixin {
+  final Bluetooth bluetooth;
+  Config _config;
+  BluetoothState _adapter;
+  BluetoothDeviceRecord _record;
+
+  Config get config => _config;
+
+  BluetoothState get adapterState => _adapter;
+
+  BluetoothDeviceRecord get record => _record;
+
+  set config(Config config) {
+    if (_config != config) {
+      _config = config;
+      notifyListeners();
+    }
+  }
+
+  BluetoothState get adapter => _adapter;
+
+  Bloc._()
+      : bluetooth = Bluetooth(),
+        _adapter = BluetoothState.UNKNOWN,
+        _config = kDefaultConfig,
+        _record = BluetoothDeviceRecord._() {
     bluetooth.addListener(this);
-    bluetooth.getAdapterState().then((value) {
-      _adapter.value = value;
-      if (value == BluetoothState.ENABLED) {
-        _fetchDeviceState();
-      }
-    });
-    // test
-    _devices.append(
-      Map.fromIterable(
-        List.generate(
-          3,
-          (i) => BluetoothDevice(
-            name: DeviceCategory.names[i],
-            address: '00:11:22:33:$i$i:55',
-          ),
-        ),
-        key: (it) => it,
-        value: (it) => BluetoothDeviceMeta(
-          state: BluetoothDeviceState.PAIRED,
-        ),
-      ),
-      notify: false,
-    );
-    _devices.append(
-      Map.fromIterable(
-        List.generate(
-          3,
-          (i) => BluetoothDevice(
-            name: DeviceCategory.names[i],
-            address: '00:11:22:33:44:$i$i',
-          ),
-        ),
-        key: (it) => it,
-        value: (it) => BluetoothDeviceMeta(
-          state: BluetoothDeviceState.CONNECTED,
-        ),
-      ),
-      notify: false,
-    );
   }
 
-  void _fetchDeviceState() {
-    bluetooth.getPairedDevices().then((v) {
-      // print('getPairedDevices -> ${v.length}');
-      _devices.append(
-        Map.fromIterable(
-          v,
-          key: (it) => it,
-          value: (it) => BluetoothDeviceMeta(
-            state: BluetoothDeviceState.PAIRED,
-          ),
-        ),
-        notify: false,
-      );
-    }).then((v) {
-      return bluetooth.getConnectedDevices().then((v) {
-        //  print('getConnectedDevices -> ${v.length}');
-        _devices.update(
-          Map.fromIterable(
-            v,
-            key: (it) => it,
-            value: (it) => BluetoothDeviceMeta(
-              state: BluetoothDeviceState.CONNECTED,
-            ),
-          ),
-          notify: false,
-        );
-      });
-    }).then((_) => _devices._notify());
-  }
-
-  static List<SingleChildWidget> get providers => [
-        Provider<Bloc>(create: (_) => Bloc._(), dispose: (_, v) => v.dispose()),
-        ValueListenableProvider(create: (c) => Bloc.of(c)._devices),
-        ValueListenableProvider(create: (c) => Bloc.of(c)._adapter),
-        ListenableProvider.value(value: defaultConfig),
-      ];
-
+  @override
   void dispose() {
     bluetooth.removeListener(this);
-    _adapter.dispose();
-    _devices.dispose();
+    super.dispose();
   }
 
   @override
   void onAdapterStateChanged(BluetoothState state) {
-    _adapter.value = state;
-    print(state);
-    if (state == BluetoothState.ENABLED) {
-      _fetchDeviceState();
+    print('onAdapterStateChanged -> $state');
+    if (_adapter != state) {
+      _adapter = state;
+      notifyListeners();
     }
   }
 
   @override
   void onDeviceStateChanged(
       BluetoothDevice device, BluetoothDeviceState state) {
-    if (state == BluetoothDeviceState.FOUND)
-      _devices.append({device: BluetoothDeviceMeta(state: state)});
-    else
-      _devices.update({device: BluetoothDeviceMeta(state: state)});
+    print('onDeviceStateChanged -> $state');
+    if (record._appendOrUpdate({device: state})) {
+      _record = _record.copyWith();
+      notifyListeners();
+    }
   }
-}
 
-class BluetoothDeviceMeta {
-  final BluetoothDeviceState state;
-  final Controller controller;
+  static Bloc of(BuildContext context) =>
+      Provider.of<Bloc>(context, listen: false);
 
-  BluetoothDeviceMeta({this.state, this.controller});
-
-  BluetoothDeviceMeta copyWith({
-    BluetoothDeviceState state,
-    Controller controller,
+  void updateConfig({
+    Locale locale,
+    ThemeData lightTheme,
+    ThemeData darkTheme,
+    ThemeMode themeMode,
+    bool timeDilation,
+    TextScale textScale,
+    bool debug,
+    bool showOffscreenLayersCheckerboard,
+    bool showPerformanceOverlay,
+    bool showRasterCacheImagesCheckerboard,
   }) {
-    return BluetoothDeviceMeta(
-      state: state ?? this.state,
-      controller: controller,
+    config = config.copyWith(
+      locale: locale ?? config.locale,
+      lightTheme: lightTheme ?? config.lightTheme,
+      darkTheme: darkTheme ?? config.darkTheme,
+      themeMode: themeMode ?? config.themeMode,
+      textScale: textScale ?? config.textScale,
+      timeDilation: timeDilation ?? config.timeDilation,
+      debug: debug ?? config.debug,
+      showOffscreenLayersCheckerboard: showOffscreenLayersCheckerboard ??
+          config.showOffscreenLayersCheckerboard,
+      showPerformanceOverlay:
+          showPerformanceOverlay ?? config.showPerformanceOverlay,
+      showRasterCacheImagesCheckerboard: showRasterCacheImagesCheckerboard ??
+          config.showRasterCacheImagesCheckerboard,
     );
   }
 
-  @override
-  bool operator ==(other) {
-    if (runtimeType != other.runtimeType) return false;
-    return state == other.state && controller == other.controller;
+//debug
+  void inject(BluetoothDevice device, BluetoothDeviceState state) {
+    onDeviceStateChanged(device, state);
   }
-
-  @override
-  int get hashCode => hashValues(state, controller);
-
-  static BluetoothDeviceMeta of(BuildContext context, BluetoothDevice device) =>
-      BluetoothDeviceMap.of(context)[device];
 }
 
-class BluetoothDeviceMap {
-  final ValueKey<int> key;
-  final Map<BluetoothDevice, BluetoothDeviceMeta> _data;
+class DeviceType {
+  final Size size;
 
-  BluetoothDeviceMap({
-    @required this.key,
-    Map<BluetoothDevice, BluetoothDeviceMeta> data,
-  }) : _data = data ?? LinkedHashMap();
+  const DeviceType._(this.size);
 
-  BluetoothDeviceMap copyWith(
-      {@required Key key, Map<BluetoothDevice, BluetoothDeviceMeta> data}) {
-    return BluetoothDeviceMap(
-      key: key,
-      data: data ?? _data,
-    );
+  factory DeviceType.of(BuildContext context) =>
+      DeviceType._(MediaQuery.of(context).size);
+
+  bool get isPhone => size.width < kPageMaxWidth;
+
+  bool get isTable => size.width < 1200 && !isPhone;
+
+  bool get isDesktop => size.width >= 1200;
+}
+
+class BluetoothDeviceRecord {
+  final int _key;
+  final Map<BluetoothDevice, BluetoothDeviceState> _data;
+
+  BluetoothDeviceRecord._({
+    int key = 0,
+    Map<BluetoothDevice, BluetoothDeviceState> data,
+  })  : _key = key,
+        _data = data ?? LinkedHashMap();
+
+  BluetoothDeviceRecord copyWith(
+      {Map<BluetoothDevice, BluetoothDeviceState> data}) {
+    return BluetoothDeviceRecord._(key: _key + 1, data: data ?? _data);
   }
 
-  Iterable<MapEntry<BluetoothDevice, BluetoothDeviceMeta>> get devices =>
-      _data.entries;
+  List<MapEntry<BluetoothDevice, BluetoothDeviceState>> get records =>
+      _data.entries.toList(growable: false);
 
-  BluetoothDeviceMeta operator [](dynamic device) {
+  int get length => _data.length;
+
+  BluetoothDeviceState operator [](dynamic device) {
     if (device is int) {
-      return devices.elementAt(device).value;
+      return records[device].value;
     }
     if (device is BluetoothDevice) {
       return _data[device];
@@ -183,7 +197,7 @@ class BluetoothDeviceMap {
     throw FormatException('Unsupported paramater type ${device.runtimeType}');
   }
 
-  bool _append(Map<BluetoothDevice, BluetoothDeviceMeta> data) {
+  bool _append(Map<BluetoothDevice, BluetoothDeviceState> data) {
     if (data.isEmpty) return false;
     // DO *NOT* use any(), it is too lazy!
     return data.entries.map<bool>((e) {
@@ -193,7 +207,7 @@ class BluetoothDeviceMap {
     }).reduce((v, e) => v & e);
   }
 
-  bool _update(Map<BluetoothDevice, BluetoothDeviceMeta> data) {
+  bool _update(Map<BluetoothDevice, BluetoothDeviceState> data) {
     if (data.isEmpty) return false;
     return data.entries.map((e) {
       if (_data.containsKey(e.key) && _data[e.key] != e.value) {
@@ -213,60 +227,20 @@ class BluetoothDeviceMap {
     return false;
   }
 
-  static BluetoothDeviceMap of(BuildContext context) =>
-      Provider.of<BluetoothDeviceMap>(context, listen: false);
+  bool _appendOrUpdate(Map<BluetoothDevice, BluetoothDeviceState> data) {
+    if (data.isEmpty) return false;
+    return data.entries.map((e) {
+      if (_data[e.key] != e.value) {
+        _data[e.key] = e.value;
+        return true;
+      }
+      return false;
+    }).reduce((v, e) => v & e);
+  }
+
+  static BluetoothDeviceRecord of(BuildContext context) =>
+      Provider.of<BluetoothDeviceRecord>(context, listen: false);
 }
-
-class _BluetoothDeviceNotifier extends ChangeNotifier
-    implements ValueNotifier<BluetoothDeviceMap> {
-  BluetoothDeviceMap value = BluetoothDeviceMap(key: ValueKey(0));
-
-  void update(Map<BluetoothDevice, BluetoothDeviceMeta> devices,
-      {bool notify = true}) {
-    final data = value.copyWith(key: ValueKey(value.key.value + 1));
-    if (data._update(devices)) {
-      value = data;
-      if (notify) notifyListeners();
-    }
-  }
-
-  void append(Map<BluetoothDevice, BluetoothDeviceMeta> devices,
-      {bool notify = true}) {
-    final data = value.copyWith(key: ValueKey(value.key.value + 1));
-    if (data._append(devices)) {
-      value = data;
-      if (notify) notifyListeners();
-    }
-  }
-
-  void remove(BluetoothDevice device, {bool notify = true}) {
-    final data = value.copyWith(key: ValueKey(value.key.value + 1));
-    if (data._remove(device)) {
-      value = data;
-      if (notify) notifyListeners();
-    }
-  }
-
-  void _notify() {
-    notifyListeners();
-  }
-}
-/*
-String selectDeviceIcon(BluetoothDevice device) {
-  switch (device.category) {
-    case DeviceCategory.ProController:
-      return 'assets/image/pro_controller_icon.png';
-    case DeviceCategory.JoyCon_L:
-      return 'assets/image/joycon_l_icon.png';
-    case DeviceCategory.JoyCon_R:
-      return 'assets/image/joycon_r_icon.png';
-    case DeviceCategory.JoyCon_Dual:
-      return 'assets/image/joycon_d_icon.png';
-    default:
-      throw ArgumentError.value(device.name);
-  }
-}
- */
 
 Widget getDeviceIcon(BluetoothDevice device, {Size size, Color color}) {
   switch (device.category) {
@@ -302,11 +276,3 @@ Widget getDeviceIcon(BluetoothDevice device, {Size size, Color color}) {
       throw ArgumentError.value(device.name);
   }
 }
-
-//
-const double kPageMaxWidth = 500;
-const BoxConstraints kPageConstraint = BoxConstraints(maxWidth: kPageMaxWidth);
-const Duration kDuration = const Duration(milliseconds: 400);
-const Color kDividerColor = const Color(0x07444444);
-const BorderSide kDividerBorderSide =
-    const BorderSide(color: kDividerColor, width: 0);

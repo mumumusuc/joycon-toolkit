@@ -105,7 +105,7 @@ class BluetoothDevice {
   int get hashCode => hashValues(name, address);
 
   @override
-  String toString() => 'BluetoothDevice:{$name, $address}';
+  String toString() => '{$name, $address}';
 
   Map<String, dynamic> toMap() => {'name': name, 'address': address};
 }

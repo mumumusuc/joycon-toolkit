@@ -22,25 +22,42 @@ class S implements WidgetsLocalizations {
   TextDirection get textDirection => TextDirection.ltr;
 
   String get about_desc => "Learn more about \"Joy-Con toolkit\" at";
+  String get action_about => "About";
   String get action_dismiss => "DISMISS";
   String get action_ok => "OK";
+  String get action_settings => "Settings";
   String get app_title => "Joy-Con toolkit";
   String get bottom_label_color => "Color";
   String get bottom_label_general => "General";
   String get bottom_label_light => "Light";
   String get bottom_label_rumble => "Rumble";
+  String get custom => "Custom";
   String get device_state_connected => "connected";
   String get device_state_connecting => "connecting";
   String get device_state_disconnecting => "disconnecting";
   String get device_state_paired => "paired";
   String get device_state_pairing => "pairing";
   String get no_device => "no device found";
+  String get option_debug => "Debug";
+  String get option_debug_desc => "enable debug";
+  String get option_language => "Language";
+  String get option_language_desc => "select language";
+  String get option_text_scale => "Text scale";
+  String get option_text_scale_desc => "select text scale";
+  String get option_theme_mode => "Theme mode";
+  String get option_theme_mode_desc => "select theme mode";
+  String get option_time_dilation => "Time dilation";
+  String get option_time_dilation_desc => "dilate animation duration";
+  String get option_title => "Settings";
   String get perm_bluetooth => "Enable bluetooth";
   String get perm_permission_1 => "Android 10 (or higher) need ";
   String get perm_permission_2 => " permission to start bluetooth discovery.";
   String get perm_service_1 => "Android 10 (or higher) need ";
   String get perm_service_2 => "ENABLE LOCATION";
   String get perm_service_3 => " to start bluetooth discovery.";
+  String get theme_mode_dark => "Dark";
+  String get theme_mode_light => "Light";
+  String get theme_mode_system => "System";
   String get title => "Joy-Con";
   String dialog_desc_disconnected(String device) => "${device} disconnected";
 }
@@ -56,47 +73,81 @@ class $zh extends S {
   TextDirection get textDirection => TextDirection.ltr;
 
   @override
-  String get app_title => "Joy-Con工具";
+  String get option_debug => "调试";
   @override
-  String get bottom_label_color => "颜色";
+  String get theme_mode_light => "亮色";
+  @override
+  String get action_settings => "设置";
   @override
   String get device_state_pairing => "配对中";
   @override
   String get device_state_disconnecting => "断连中";
   @override
-  String get bottom_label_light => "指示灯";
-  @override
   String get title => "Joy-Con";
-  @override
-  String get bottom_label_general => "常规";
   @override
   String get perm_bluetooth => "打开蓝牙";
   @override
-  String get no_device => "未发现设备";
+  String get option_time_dilation_desc => "增加动画时长";
+  @override
+  String get action_about => "关于";
+  @override
+  String get theme_mode_dark => "暗色";
   @override
   String get action_ok => "好";
   @override
-  String get action_dismiss => "忽略";
-  @override
-  String get device_state_connected => "已连接";
-  @override
   String get device_state_paired => "已配对";
-  @override
-  String get perm_service_3 => "进行蓝牙搜索";
-  @override
-  String get perm_service_2 => "打开定位";
-  @override
-  String get device_state_connecting => "连接中";
-  @override
-  String get perm_service_1 => "Android 10(或以上版本)需要";
   @override
   String get perm_permission_1 => "Android 10(或以上版本)需要拥有";
   @override
   String get perm_permission_2 => "权限进行蓝牙搜索";
   @override
+  String get bottom_label_rumble => "震动";
+  @override
+  String get option_title => "设置";
+  @override
+  String get option_theme_mode_desc => "选择主题模式";
+  @override
+  String get app_title => "Joy-Con工具";
+  @override
+  String get bottom_label_color => "颜色";
+  @override
+  String get option_text_scale => "文字缩放";
+  @override
+  String get custom => "自定义";
+  @override
+  String get bottom_label_light => "指示灯";
+  @override
+  String get bottom_label_general => "常规";
+  @override
+  String get option_debug_desc => "打开调试";
+  @override
+  String get option_text_scale_desc => "选择文字缩放";
+  @override
+  String get no_device => "未发现设备";
+  @override
+  String get option_language => "语言";
+  @override
+  String get action_dismiss => "忽略";
+  @override
+  String get device_state_connected => "已连接";
+  @override
+  String get perm_service_3 => "进行蓝牙搜索";
+  @override
+  String get option_language_desc => "选择语言";
+  @override
+  String get perm_service_2 => "打开定位";
+  @override
+  String get theme_mode_system => "系统";
+  @override
+  String get option_theme_mode => "主题模式";
+  @override
+  String get device_state_connecting => "连接中";
+  @override
+  String get perm_service_1 => "Android 10(或以上版本)需要";
+  @override
   String get about_desc => "关于\"Joy-Con工具\"更多信息请参考以下链接";
   @override
-  String get bottom_label_rumble => "震动";
+  String get option_time_dilation => "慢镜头";
   @override
   String dialog_desc_disconnected(String device) => "${device}已断开连接";
 }

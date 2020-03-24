@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:android_intent/android_intent.dart';
 import 'generated/i18n.dart';
-import 'widgets/fade.dart';
+import 'widgets/expand.dart';
 import 'dart:io';
 
 const String _permissionUrl =
@@ -209,8 +209,8 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
       child: Consumer<bool>(
         child: container?.call(_permissionBanner) ?? _permissionBanner,
         builder: (context, abnormal, child) {
-          return FadeWidget(
-            fade: !abnormal,
+          return ExpandWidget(
+            expand: abnormal,
             child: child,
           );
         },
@@ -224,8 +224,8 @@ abstract class PermissionState<T extends StatefulWidget> extends State<T>
       child: Consumer<bool>(
         child: container?.call(_serviceBanner) ?? _serviceBanner,
         builder: (context, abnormal, child) {
-          return FadeWidget(
-            fade: !abnormal,
+          return ExpandWidget(
+            expand: abnormal,
             child: child,
           );
         },

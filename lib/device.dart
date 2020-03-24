@@ -1,5 +1,10 @@
 library device;
 
+import 'dart:ui';
+import 'dart:math';
+import 'dart:async';
+import 'package:animations/animations.dart';
+import 'package:community_material_icon/community_material_icon.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
     as ext;
 import 'package:flutter/foundation.dart';
@@ -8,165 +13,104 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'widgets/keep_alive.dart';
+import 'package:path_drawing/path_drawing.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'dart:async';
 import 'bloc.dart';
 import 'bluetooth/bluetooth.dart';
 import 'bluetooth/controller.dart';
 import 'generated/i18n.dart';
+import 'widgets/icon_text.dart';
 
-part 'device/general.dart';
+part 'device/light2.dart';
 
-part 'device/light.dart';
+part 'device/rumble2.dart';
 
-part 'device/rumble.dart';
+part 'device/color2.dart';
 
-part 'device/color.dart';
+part 'device/components.dart';
 
-const double _kTabbarHeight = 48;
+const double _kTabBarHeight = 48;
 
-class DeviceWidget extends StatelessWidget {
+class DeviceWidget extends StatefulWidget {
   final BluetoothDevice device;
-  final List<_WidgetHolder> _slivers = [
-    _WidgetHolder(
-      nameBuilder: (c) => S.of(c).bottom_label_general,
-      iconData: Icons.perm_device_information,
-      builder: (c) => _GeneralWidget(c),
-    ),
-    _WidgetHolder(
-      nameBuilder: (c) => S.of(c).bottom_label_rumble,
-      iconData: Icons.vibration,
-      builder: (c) => _RumbleWidget(c),
-    ),
-    _WidgetHolder(
-      nameBuilder: (c) => S.of(c).bottom_label_light,
-      iconData: Icons.highlight,
-      builder: (c) => _LightWidget(c),
-    ),
-    _WidgetHolder(
-      nameBuilder: (c) => S.of(c).bottom_label_color,
-      iconData: Icons.color_lens,
-      builder: (c) => _ColorWidget(c),
-    ),
-  ];
-  final ValueNotifier<int> _index = ValueNotifier(0);
-  final PageController _controller = PageController();
 
-  DeviceWidget({Key key, @required this.device}) : super(key: key);
+  const DeviceWidget({Key key, @required this.device}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _DeviceWidgetState();
+}
+
+class _DeviceWidgetState extends State<DeviceWidget> {
+  Controller _controller;
+
+  BluetoothDevice get _device => widget.device;
+
+  @override
+  void initState() {
+    print('device -> initState');
+    super.initState();
+    _controller = Controller.test(_device);
+  }
+
+  @override
+  void dispose() {
+    print('device -> dispose');
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    print('device -> didChangeDependencies');
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didUpdateWidget(DeviceWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('device -> didUpdateWidget');
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ValueListenableProvider.value(value: _index),
-        ProxyProvider<BluetoothDeviceMap, BluetoothDeviceState>(
-          lazy: false,
-          update: (c, map, v) {
-            final state = map[device].state;
-            if (v != state && state != BluetoothDeviceState.CONNECTED) {
-              WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-                _showDialog(c);
-              });
-            }
-            return state;
-          },
-        ),
-        ProxyProvider<BluetoothDeviceState, Controller>(
-          updateShouldNotify: (_, __) => false,
-          update: (c, _, v) => v ?? Controller(device),
-          dispose: (_, v) => v.dispose(),
-        ),
-      ],
-      child: _build(context),
-    );
-  }
-
-  Widget _build(BuildContext context) {
-    print('build controller body');
-    return Scaffold(
-      body: ext.NestedScrollView(
-        pinnedHeaderSliverHeightBuilder: () =>
-            _kTabbarHeight + MediaQuery.of(context).padding.top,
-        headerSliverBuilder: (context, innerScrolled) {
-          //final ThemeData theme = Theme.of(context);
-          return [
-            SliverAppBar(
-              title: Text(device.name),
-              centerTitle: true,
-              floating: true,
-              pinned: true,
-              //snap: true,
-              forceElevated: innerScrolled,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(_kTabbarHeight),
-                child: _buildIndicator(context),
-              ),
-            ),
-          ];
-        },
-        body: Consumer<Controller>(
-          builder: (context, controller, __) {
-            return PageView(
-              controller: _controller,
-              //scrollDirection: Axis.vertical,
-              children: _slivers.map((e) {
-                return AliveWidgetBuilder(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: kPageConstraint,
-                      child: SingleChildScrollView(
-                        child: e.builder(controller),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-              onPageChanged: (v) => _index.value = v,
-            );
-          },
+    print('device -> build');
+    Widget child;
+    child = Scaffold(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints.loose(Size.fromWidth(kPageMaxWidth)),
+          child: _Phone(_controller),
         ),
       ),
     );
-  }
-
-  Widget _buildIndicator(BuildContext context) {
-    return Container(
-      height: _kTabbarHeight,
-      constraints: kPageConstraint,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      alignment: Alignment.center,
-      child: Consumer<int>(
-        builder: (context, index, _) {
-          return GNav(
-            gap: 8,
-            selectedIndex: index,
-            color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.3),
-            activeColor: Theme.of(context).colorScheme.onPrimary,
-            iconSize: 20,
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            duration: kDuration,
-            //backgroundColor: Theme.of(context).primaryColor,
-            tabBackgroundColor: Theme.of(context).colorScheme.primaryVariant,
-            tabs: _slivers.map((e) {
-              return GButton(
-                text: e.getName(context),
-                icon: e.iconData,
-              );
-            }).toList(),
-            onTabChange: (i) {
-              _controller.animateToPage(
-                i,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
-          );
+    /*
+    final DeviceType type = DeviceType.of(context);
+    if (type.isDesktop)
+      child = _DeviceDesktop(_controller);
+    else
+      child = _DevicePhone(_controller);
+    */
+    assert(child != null);
+    return MultiProvider(
+      providers: [
+        Provider.value(value: _device),
+        Provider.value(value: _controller),
+      ],
+      child: Selector<BluetoothDeviceRecord, BluetoothDeviceState>(
+        selector: (_, r) => r[_device],
+        child: child,
+        builder: (context, state, child) {
+          if (state != BluetoothDeviceState.CONNECTED &&
+              ModalRoute.of(context).isCurrent) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showDialog(context);
+            });
+          }
+          return child;
         },
       ),
     );
@@ -179,57 +123,28 @@ class DeviceWidget extends StatelessWidget {
         pageBuilder: (context, animation, ___) {
           return WillPopScope(
             onWillPop: () async => false,
-            child: AnimatedBuilder(
+            child: FadeScaleTransition(
               animation: animation,
-              child: Center(
-                child: UnconstrainedBox(
-                  child: LimitedBox(
-                    maxWidth: 300,
-                    maxHeight: 200,
-                    child: Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Expanded(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Text(
-                                  S.of(context).dialog_desc_disconnected(
-                                      '${device.name}(${device.address})'),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.subtitle1,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const Divider(height: 3),
-                          SizedBox(
-                            height: 48,
-                            child: FlatButton(
-                              textColor: Theme.of(context).primaryColor,
-                              child: Text(S.of(context).action_ok),
-                              onPressed: () {
-                                Navigator.popUntil(
-                                    context, ModalRoute.withName('/home'));
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              child: AlertDialog(
+                title: const Icon(CommunityMaterialIcons.alert),
+                content: Text(
+                  S.of(context).dialog_desc_disconnected(
+                      '${_device.name}(${_device.address})'),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              builder: (_, child) {
-                return Opacity(
-                  opacity: animation.value,
-                  child: Transform.scale(
-                    scale: animation.value,
-                    child: child,
+                actions: [
+                  FlatButton(
+                    textTheme: ButtonTextTheme.accent,
+                    child: Text(S.of(context).action_ok),
+                    onPressed: () {
+                      Navigator.popUntil(
+                        context,
+                        (route) => route.isFirst,
+                      );
+                    },
                   ),
-                );
-              },
+                ],
+              ),
             ),
           );
         },
@@ -238,32 +153,183 @@ class DeviceWidget extends StatelessWidget {
   }
 }
 
-typedef _ControllerBuilder = Widget Function(Controller);
-typedef _NameBuilder = String Function(BuildContext);
+class _Phone extends StatefulWidget {
+  final Controller controller;
 
-class _WidgetHolder {
-  final String _name;
-  final Widget _icon;
-  final IconData iconData;
-  final _NameBuilder _nameBuilder;
-  final _ControllerBuilder builder;
+  const _Phone(this.controller);
 
-  const _WidgetHolder(
-      {String name,
-      _NameBuilder nameBuilder,
-      Widget icon,
-      this.iconData,
-      this.builder})
-      : assert(name != null || nameBuilder != null),
-        assert(icon != null || iconData != null),
-        assert(builder != null),
-        _name = name,
-        _icon = icon,
-        _nameBuilder = nameBuilder;
+  @override
+  State<StatefulWidget> createState() => _PhoneState();
+}
 
-  String getName(BuildContext context) => _name ?? _nameBuilder(context);
+class _PhoneState extends State<_Phone> {
+  PageController _controller;
+  ValueNotifier<int> _index;
 
-  Widget get icon => _icon ?? Icon(iconData);
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController();
+    _index = ValueNotifier(_controller.initialPage);
+  }
+
+  @override
+  void dispose() {
+    _index.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final S s = S.of(context);
+    return ValueListenableProvider.value(
+      value: _index,
+      child: ext.NestedScrollView(
+        pinnedHeaderSliverHeightBuilder: () =>
+            _kTabBarHeight + MediaQuery.of(context).padding.top,
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar(
+            title: Text(widget.controller.device.name),
+            centerTitle: true,
+            floating: true,
+            pinned: true,
+            forceElevated: innerBoxIsScrolled,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(_kTabBarHeight),
+              child: Container(
+                height: _kTabBarHeight,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: Consumer<int>(
+                  builder: (context, value, _) {
+                    return GNav(
+                      onTabChange: (index) => _controller.animateToPage(
+                        index,
+                        duration: kDuration,
+                        curve: Curves.easeInOut,
+                      ),
+                      selectedIndex: value,
+                      gap: 8,
+                      iconSize: 20,
+                      duration: kDuration,
+                      color: theme.colorScheme.onPrimary.withOpacity(0.4),
+                      activeColor: theme.colorScheme.onPrimary,
+                      tabBackgroundColor: theme.primaryColorDark,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 16),
+                      tabs: [
+                        GButton(
+                          icon:
+                              CommunityMaterialIcons.controller_classic_outline,
+                          text: s.bottom_label_general,
+                        ),
+                        GButton(
+                          icon: CommunityMaterialIcons.palette_outline,
+                          text: s.bottom_label_color,
+                        ),
+                        GButton(
+                          icon: CommunityMaterialIcons.lightbulb_outline,
+                          text: s.bottom_label_light,
+                        ),
+                        GButton(
+                          icon: CommunityMaterialIcons.vibrate,
+                          text: s.bottom_label_rumble,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+        body: PageView(
+          controller: _controller,
+          onPageChanged: (index) => _index.value = index,
+          children: [
+            KeepAliveWidgetBuilder(
+              child: ListView(
+                children: [
+                  Text('info'),
+                  Card(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: _DeviceInfo(widget.controller),
+                  ),
+                  Text('button'),
+                  Card(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: _DeviceButton(),
+                  ),
+                  Text('axes'),
+                  Card(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: _DeviceAxes(),
+                  ),
+                  Text('memory'),
+                  Card(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: _DeviceMemory(),
+                  ),
+                ],
+              ),
+            ),
+            KeepAliveWidgetBuilder(
+              child: SingleChildScrollView(
+                child: ListBody(
+                  children: [
+                    Text('color'),
+                    Card(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: _DeviceColor(widget.controller),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            KeepAliveWidgetBuilder(
+              child: SingleChildScrollView(
+                child: ListBody(
+                  children: [
+                    Text('light'),
+                    Card(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: _DevicePlayerLight(widget.controller),
+                    ),
+                    Card(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: _DeviceHomeLight(widget.controller),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            KeepAliveWidgetBuilder(
+              child: SingleChildScrollView(
+                child: ListBody(
+                  children: [
+                    Text('rumble'),
+                    Card(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: _DeviceRumble(widget.controller),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Desktop extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    throw UnimplementedError();
+  }
 }
 
 class DialogRoute<T> extends PopupRoute<T> {
@@ -326,58 +392,5 @@ class DialogRoute<T> extends PopupRoute<T> {
           child: child);
     } // Some default transition
     return _transitionBuilder(context, animation, secondaryAnimation, child);
-  }
-}
-
-abstract class AliveWidget extends StatefulWidget {
-  const AliveWidget();
-
-  @override
-  State<StatefulWidget> createState() => _AliveWidgetState();
-
-  Widget build(BuildContext context);
-}
-
-class AliveWidgetBuilder extends AliveWidget {
-  final Widget child;
-
-  const AliveWidgetBuilder({@required this.child});
-
-  @override
-  Widget build(BuildContext context) => child;
-}
-
-class _AliveWidgetState extends State<AliveWidget>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.build(context);
-  }
-}
-
-class _StickyBarDelegate extends SliverPersistentHeaderDelegate {
-  final PreferredSizeWidget child;
-
-  const _StickyBarDelegate({@required this.child});
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return this.child;
-  }
-
-  @override
-  double get maxExtent => child.preferredSize.height;
-
-  @override
-  double get minExtent => child.preferredSize.height;
-
-  @override
-  bool shouldRebuild(SliverPersistentHeaderDelegate oldDelegate) {
-    return false;
   }
 }

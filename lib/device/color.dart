@@ -1,3 +1,4 @@
+/*
 part of device;
 
 const double _maxWidth = 350;
@@ -5,10 +6,10 @@ const double _maxHeight = 350;
 const double _minWidth = 300;
 const double _minHeight = 300;
 
-class _ColorWidget extends StatelessWidget {
+class _DeviceColor extends StatelessWidget {
   final Controller controller;
 
-  const _ColorWidget(this.controller, {Key key}) : super(key: key);
+  const _DeviceColor(this.controller, {Key key}) : super(key: key);
 
   int get _index => controller.category.index;
 
@@ -594,3 +595,6 @@ const List<_Profile> _ProPresets = [
     code: const Color(0xFF323132),
   ),
 ];
+
+
+ */

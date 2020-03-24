@@ -20,5 +20,22 @@
   "bottom_label_rumble": "震动",
   "bottom_label_light": "指示灯",
   "bottom_label_color": "颜色",
-  "dialog_desc_disconnected": "${device}已断开连接"
+  "dialog_desc_disconnected": "${device}已断开连接",
+  "theme_mode_system": "系统",
+  "theme_mode_light": "亮色",
+  "theme_mode_dark": "暗色",
+  "option_title": "设置",
+  "option_time_dilation": "慢镜头",
+  "option_time_dilation_desc": "增加动画时长",
+  "option_debug": "调试",
+  "option_debug_desc": "打开调试",
+  "option_language": "语言",
+  "option_language_desc": "选择语言",
+  "option_theme_mode": "主题模式",
+  "option_theme_mode_desc": "选择主题模式",
+  "option_text_scale": "文字缩放",
+  "option_text_scale_desc": "选择文字缩放",
+  "action_settings": "设置",
+  "action_about": "关于",
+  "custom": "自定义"
 }

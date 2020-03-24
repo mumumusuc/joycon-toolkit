@@ -1,74 +1,60 @@
-/*
 part of device;
 
 typedef OnSaved = void Function(String);
 
-class _RumbleWidget extends StatelessWidget {
-  static const List<String> _musics = const [
-    'custom',
-    'Zelda main theme.mp3',
-    'Mario main theme.mp3',
-    '希望の花.mp3',
-  ];
+const List<String> _musics = const [
+  'custom',
+  'Zelda main theme.mp3',
+  'Mario main theme.mp3',
+  '希望の花.mp3',
+];
+
+class _DeviceRumble extends StatefulWidget {
+  final Controller controller;
+
+  const _DeviceRumble(this.controller);
+
+  @override
+  State<StatefulWidget> createState() => _DeviceRumbleState();
+}
+
+class _DeviceRumbleState extends State<_DeviceRumble> {
   final GlobalKey<FormState> _formKey = GlobalKey();
   final List<double> _data_l = List(4);
   final List<double> _data_r = List(4);
-  final Controller controller;
+  ValueNotifier<String> _rumble;
 
-  _RumbleWidget(this.controller, {Key key}) : super(key: key);
+  Controller get controller => widget.controller;
 
-  Widget _buildLimitedInput(String label, int limit, OnSaved onSaved,
-      {num defaultValue}) {
-    return TextFormField(
-      decoration: InputDecoration(
-        filled: true,
-        labelText: label,
-      ),
-      inputFormatters: [
-        WhitelistingTextInputFormatter(RegExp("[0-9.]")),
-        LengthLimitingTextInputFormatter(limit + 1),
-      ],
-      keyboardType: TextInputType.number,
-      textInputAction: TextInputAction.next,
-      maxLines: 1,
-      onSaved: onSaved,
-      initialValue: '${defaultValue ?? 0}',
-    );
+  @override
+  void initState() {
+    super.initState();
+    _rumble = ValueNotifier(null);
   }
 
-  Widget _buildMusicSliver(BuildContext context) {
-    final style = Theme.of(context).textTheme.caption;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Consumer<_PlaybackNotifier>(
-        builder: (_, v, __) {
-          final pb = v.value;
-          return Row(
-            children: <Widget>[
-              Text(pb.current.toString().split('.')[0], style: style),
-              Expanded(
-                child: Slider(
-                  label: pb.percent.toStringAsPrecision(2),
-                  value: pb.progress.toDouble(),
-                  min: 0,
-                  max: pb.total.toDouble(),
-                  divisions: pb.channel == 0 ? null : (pb.channel * 4),
-                  onChanged: (vv) {
-                    v.update(vv.toInt());
-                  },
-                ),
-              ),
-              Text(pb.duration.toString().split('.')[0], style: style),
-            ],
-          );
-        },
-      ),
-    );
+  @override
+  void dispose() {
+    _rumble.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    print('build rumble widget');
+    print('_DeviceRumble -> build');
+    return MultiProvider(
+      providers: [
+        ValueListenableProvider.value(value: _rumble),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildPlaySelector(context),
+          const Divider(height: 1),
+          _buildPlayContent(context),
+        ],
+      ),
+    );
+    /*
     List<Widget> children = [
       ListTile(
         leading: const Icon(Icons.vibration),
@@ -197,27 +183,58 @@ class _RumbleWidget extends StatelessWidget {
         ),
       ),
     );
+     */
   }
 
-  Widget _buildRumbleInputs(BuildContext context) {
-    switch (controller.category) {
+  Widget _buildPlaySelector(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.vibration),
+      title: Consumer<String>(
+        child: Text(S.of(context).custom),
+        builder: (context, value, child) {
+          if (!_musics.contains(value)) value = null;
+          return BoxedDropDown<String>(
+            items: _musics,
+            value: value,
+            onChanged: (v) => _rumble.value = v,
+          );
+        },
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.send),
+        onPressed: () {
+          //
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlayContent(BuildContext context) {
+    return Consumer<String>(
+      child: Text(S.of(context).custom),
+      builder: (context, value, child) {
+        if (value == null || value == _musics[0])
+          return _buildCustomPart(context);
+        else
+          return _buildMusicPart(context, value);
+      },
+    );
+  }
+
+  Widget _buildCustomPart(BuildContext context) {
+    final DeviceCategory cate = controller.category;
+    switch (cate) {
       case DeviceCategory.JoyCon_L:
         return _buildRumbleWidget(
           context,
           _data_l,
-          leading: const CircleAvatar(
-            child: Text('L'),
-            radius: 18,
-          ),
+          leading: const Icon(CommunityMaterialIcons.alpha_l),
         );
       case DeviceCategory.JoyCon_R:
         return _buildRumbleWidget(
           context,
           _data_r,
-          leading: const CircleAvatar(
-            child: Text('R'),
-            radius: 18,
-          ),
+          leading: const Icon(CommunityMaterialIcons.alpha_r),
         );
       case DeviceCategory.ProController:
         return Column(
@@ -226,24 +243,68 @@ class _RumbleWidget extends StatelessWidget {
             _buildRumbleWidget(
               context,
               _data_l,
-              leading: const CircleAvatar(
-                child: Text('L'),
-                radius: 18,
-              ),
+              leading: const Icon(CommunityMaterialIcons.alpha_l),
             ),
             _buildRumbleWidget(
               context,
               _data_r,
-              leading: const CircleAvatar(
-                child: Text('R'),
-                radius: 18,
-              ),
+              leading: const Icon(CommunityMaterialIcons.alpha_r),
             ),
           ],
         );
       default:
-        return SizedBox();
+        throw UnsupportedError('Unsupport device category: $cate');
     }
+  }
+
+  Widget _buildMusicPart(BuildContext context, String name) {
+    return SizedBox();
+  }
+
+  Widget _buildLimitedInput(String label, int limit, OnSaved onSaved,
+      {num defaultValue, num maxValue}) {
+    return TextFormField(
+      decoration: InputDecoration(filled: true, labelText: label),
+      inputFormatters: [
+        DecimalFormatter(maxValue),
+        LengthLimitingTextInputFormatter(limit),
+      ],
+      keyboardType: TextInputType.number,
+      textInputAction: TextInputAction.next,
+      maxLines: 1,
+      onSaved: onSaved,
+      initialValue: '${defaultValue ?? 0}',
+    );
+  }
+
+  Widget _buildMusicSliver(BuildContext context) {
+    final style = Theme.of(context).textTheme.caption;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Consumer<_PlaybackNotifier>(
+        builder: (_, v, __) {
+          final pb = v.value;
+          return Row(
+            children: <Widget>[
+              Text(pb.current.toString().split('.')[0], style: style),
+              Expanded(
+                child: Slider(
+                  label: pb.percent.toStringAsPrecision(2),
+                  value: pb.progress.toDouble(),
+                  min: 0,
+                  max: pb.total.toDouble(),
+                  divisions: pb.channel == 0 ? null : (pb.channel * 4),
+                  onChanged: (vv) {
+                    v.update(vv.toInt());
+                  },
+                ),
+              ),
+              Text(pb.duration.toString().split('.')[0], style: style),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildRumbleWidget(BuildContext context, List<double> data,
@@ -255,9 +316,10 @@ class _RumbleWidget extends StatelessWidget {
           Expanded(
               child: _buildLimitedInput(
             'HF',
-            4,
+            6,
             (s) => data[0] = double.parse(s),
-            defaultValue: 320,
+            defaultValue: 320.0,
+            maxValue: 1250.0,
           )),
           const VerticalDivider(width: 3),
           Expanded(
@@ -266,14 +328,15 @@ class _RumbleWidget extends StatelessWidget {
             3,
             (s) => data[1] = double.parse(s),
             defaultValue: 0.0,
+            maxValue: 1.0,
           )),
           const VerticalDivider(width: 3),
           Expanded(
               child: _buildLimitedInput(
             'LF',
-            3,
+            5,
             (s) => data[2] = double.parse(s),
-            defaultValue: 160,
+            defaultValue: 160.0,
           )),
           const VerticalDivider(width: 3),
           Expanded(
@@ -345,4 +408,67 @@ class _PlaybackNotifier extends ChangeNotifier
   static _PlaybackNotifier of(BuildContext context) =>
       Provider.of<_PlaybackNotifier>(context, listen: false);
 }
- */
+
+class DecimalFormatter extends TextInputFormatter {
+  static final NumberFormat _formatter = NumberFormat('###0.0')
+    ..turnOffGrouping();
+  static final String _decimalSeparator = _formatter.symbols.DECIMAL_SEP;
+  static final WhitelistingTextInputFormatter _decimalFormatter =
+      WhitelistingTextInputFormatter(RegExp('[0-9.]'));
+  static final RegExp _decimalRegex = RegExp('[0-9.]');
+  final double maxValue;
+  TextEditingValue _lastNewValue;
+
+  DecimalFormatter([this.maxValue]);
+
+  String _formatPattern(String digits) {
+    print('1_formatPattern -> $digits');
+    if (digits == null || digits.isEmpty) return digits;
+    double number = (double.tryParse(digits) ?? 0.0);
+    if (maxValue != null) number = number.clamp(0, maxValue);
+    final result = _formatter.format(number);
+    print('2_formatPattern -> $result');
+    return result;
+  }
+
+  TextEditingValue _formatValue(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    return _decimalFormatter.formatEditUpdate(oldValue, newValue);
+  }
+
+  bool _isUserInput(String s) {
+    return s == _decimalSeparator || _decimalRegex.firstMatch(s) != null;
+  }
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text == _lastNewValue?.text) {
+      return newValue;
+    }
+    _lastNewValue = newValue;
+    newValue = _formatValue(oldValue, newValue);
+    int selectionIndex = newValue.selection.end;
+    final newText = _formatPattern(newValue.text);
+    int insertCount = 0;
+    int inputCount = 0;
+    for (int i = 0; i < newText.length && inputCount < selectionIndex; i++) {
+      final character = newText[i];
+      if (_isUserInput(character))
+        inputCount++;
+      else
+        insertCount++;
+    }
+    selectionIndex += insertCount;
+    selectionIndex = min(selectionIndex, newText.length);
+    if (selectionIndex - 1 >= 0 &&
+        selectionIndex - 1 < newText.length &&
+        !_isUserInput(newText[selectionIndex - 1])) {
+      selectionIndex--;
+    }
+    return newValue.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selectionIndex),
+        composing: TextRange.empty);
+  }
+}

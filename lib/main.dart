@@ -1,21 +1,19 @@
-import 'dart:io';
-
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
+import 'dart:io';
 import 'bloc.dart';
-import 'home2.dart';
-import 'option/config.dart';
+import 'home.dart';
 import 'generated/i18n.dart';
 import 'splash.dart';
+import 'test.dart';
 
 void main() {
   // See https://github.com/flutter/flutter/wiki/Desktop-shells#target-platform-override
   debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
   runApp(MyApp());
+  //runApp(TestApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -23,11 +21,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Locale locale = Locale('en', '');
-    return MultiProvider(
-      providers: Bloc.providers,
-      child: Consumer<AppConfig>(
-        builder: (context, config, _) {
+    print('build root');
+    return BlocProvider(
+      child: Consumer<Config>(
+        builder: (context, config, __) {
+          print('build material app');
           // See https://github.com/flutter/flutter/wiki/Desktop-shells#fonts
           return MaterialApp(
             onGenerateTitle: (context) => S.of(context).title,
@@ -37,17 +35,11 @@ class MyApp extends StatelessWidget {
                 config.showRasterCacheImagesCheckerboard,
             theme: config.lightTheme,
             darkTheme: config.darkTheme,
-            themeMode: ThemeMode.system,
-            //locale: locale,
-            localizationsDelegates: [
-              S.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: S.delegate.supportedLocales,
-            localeResolutionCallback:
-                S.delegate.resolution(fallback: locale, withCountry: false),
+            themeMode: config.themeMode,
+            locale: config.locale,
+            localizationsDelegates: Config.localizationsDelegates,
+            supportedLocales: Config.supportedLocales,
+            localeResolutionCallback: config.localeResolutionCallback,
             initialRoute: Platform.isAndroid ? '/home' : '/home/splash',
             onGenerateInitialRoutes: (p) {
               final List<Route> routes = [];
@@ -67,7 +59,6 @@ class MyApp extends StatelessWidget {
             },
             onGenerateRoute: (settings) {
               switch (settings.name) {
-                case '/':
                 case '/home':
                   return MaterialPageRoute(
                     builder: (_) => HomePage(),
@@ -77,14 +68,14 @@ class MyApp extends StatelessWidget {
                   return null;
               }
             },
-/*
             builder: (context, child) {
-              return Container(
-                color: Theme.of(context).primaryColor,
-                child: SafeArea(child: child),
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaleFactor: config.textScale.scale,
+                ),
+                child: child,
               );
             },
- */
           );
         },
       ),

@@ -20,5 +20,22 @@
   "bottom_label_rumble": "Rumble",
   "bottom_label_light": "Light",
   "bottom_label_color": "Color",
-  "dialog_desc_disconnected": "${device} disconnected"
+  "dialog_desc_disconnected": "${device} disconnected",
+  "theme_mode_system": "System",
+  "theme_mode_light": "Light",
+  "theme_mode_dark": "Dark",
+  "option_title": "Settings",
+  "option_time_dilation": "Time dilation",
+  "option_time_dilation_desc": "dilate animation duration",
+  "option_debug": "Debug",
+  "option_debug_desc": "enable debug",
+  "option_language": "Language",
+  "option_language_desc": "select language",
+  "option_theme_mode": "Theme mode",
+  "option_theme_mode_desc": "select theme mode",
+  "option_text_scale": "Text scale",
+  "option_text_scale_desc": "select text scale",
+  "action_settings": "Settings",
+  "action_about": "About",
+  "custom": "Custom"
 }

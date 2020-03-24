@@ -1,3 +1,4 @@
+/*
 part of device;
 
 typedef _Select = int Function(HomeLightPattern);
@@ -365,3 +366,6 @@ class _PatternNotifier extends ChangeNotifier
     );
   }
 }
+
+
+ */
