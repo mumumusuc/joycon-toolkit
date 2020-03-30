@@ -7,11 +7,11 @@ import 'bloc.dart';
 import 'home.dart';
 import 'generated/i18n.dart';
 import 'splash.dart';
-import 'test.dart';
+import 'test/test.dart';
 
 void main() {
   // See https://github.com/flutter/flutter/wiki/Desktop-shells#target-platform-override
-  debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+  //debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
   runApp(MyApp());
   //runApp(TestApp());
 }

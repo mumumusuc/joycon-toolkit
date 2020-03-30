@@ -209,8 +209,7 @@ class _PhoneState extends State<_Phone> {
                             vertical: 4, horizontal: 16),
                         tabs: [
                           GButton(
-                            icon: CommunityMaterialIcons
-                                .controller_classic_outline,
+                            icon: CommunityMaterialIcons.wrench_outline,
                             text: s.bottom_label_general,
                           ),
                           GButton(
@@ -248,12 +247,12 @@ class _PhoneState extends State<_Phone> {
                     Text('button'),
                     Card(
                       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: _DeviceButton(),
+                      child: _DeviceButton(widget.controller),
                     ),
-                    Text('axes'),
+                    Text('axis'),
                     Card(
                       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: _DeviceAxes(),
+                      child: _DeviceAxis(),
                     ),
                     Text('memory'),
                     Card(
@@ -336,34 +335,36 @@ class _Tablet extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             staggeredTiles: [
               // general
+              //const StaggeredTile.fit(2),
               const StaggeredTile.fit(2),
-              const StaggeredTile.fit(2),
+              const StaggeredTile.fit(1),
               const StaggeredTile.fit(1),
               const StaggeredTile.fit(1),
               const StaggeredTile.fit(1),
               // color
-              const StaggeredTile.fit(1),
+              //const StaggeredTile.fit(1),
               const StaggeredTile.fit(1),
               // light
-              const StaggeredTile.fit(2),
+              //const StaggeredTile.fit(2),
               const StaggeredTile.fit(1),
               const StaggeredTile.fit(1),
               // rumble
-              const StaggeredTile.fit(1),
+              //const StaggeredTile.fit(1),
               const StaggeredTile.fit(1),
             ],
             children: [
-              Text('General'),
+              //Text('General'),
               Card(child: _DeviceInfo(controller)),
-              Card(child: _DeviceButton()),
-              Card(child: _DeviceAxes()),
+              Card(child: _DeviceButton(controller)),
+              Card(child: _DeviceAxis()),
               Card(child: _DeviceMemory()),
-              Text('Color'),
+              Card(child: _DeviceLogger()),
+              //Text('Color'),
               Card(child: _DeviceColor(controller)),
-              Text('Light'),
+              //Text('Light'),
               Card(child: _DevicePlayerLight(controller)),
               Card(child: _DeviceHomeLight(controller)),
-              Text('Rumble'),
+              //Text('Rumble'),
               Card(child: _DeviceRumble(controller)),
             ],
           ),
@@ -405,8 +406,8 @@ class _Desktop extends StatelessWidget {
             ],
             children: [
               Card(child: _DeviceInfo(controller)),
-              Card(child: _DeviceButton()),
-              Card(child: _DeviceAxes()),
+              Card(child: _DeviceButton(controller)),
+              Card(child: _DeviceAxis()),
               Card(child: _DeviceMemory()),
               Card(child: _DeviceColor(controller)),
               Card(child: _DevicePlayerLight(controller)),

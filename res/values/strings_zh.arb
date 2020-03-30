@@ -41,5 +41,7 @@
   "profile_body": "主体",
   "profile_button": "按键",
   "profile_left_grip": "左握把",
-  "profile_right_grip": "右握把"
+  "profile_right_grip": "右握把",
+  "backup": "备份",
+  "restore": "还原"
 }

@@ -196,6 +196,7 @@ class _DeviceRumbleState extends State<_DeviceRumble> {
           return BoxedDropDown<String>(
             items: _musics,
             value: value,
+            hint: child,
             onChanged: (v) => _rumble.value = v,
           );
         },
@@ -228,13 +229,13 @@ class _DeviceRumbleState extends State<_DeviceRumble> {
         return _buildRumbleWidget(
           context,
           _data_l,
-          leading: const Icon(CommunityMaterialIcons.alpha_l),
+          icon: const Icon(CommunityMaterialIcons.alpha_l),
         );
       case DeviceCategory.JoyCon_R:
         return _buildRumbleWidget(
           context,
           _data_r,
-          leading: const Icon(CommunityMaterialIcons.alpha_r),
+          icon: const Icon(CommunityMaterialIcons.alpha_r),
         );
       case DeviceCategory.ProController:
         return Column(
@@ -243,12 +244,12 @@ class _DeviceRumbleState extends State<_DeviceRumble> {
             _buildRumbleWidget(
               context,
               _data_l,
-              leading: const Icon(CommunityMaterialIcons.alpha_l),
+              icon: const Icon(CommunityMaterialIcons.alpha_l),
             ),
             _buildRumbleWidget(
               context,
               _data_r,
-              leading: const Icon(CommunityMaterialIcons.alpha_r),
+              icon: const Icon(CommunityMaterialIcons.alpha_r),
             ),
           ],
         );
@@ -308,9 +309,9 @@ class _DeviceRumbleState extends State<_DeviceRumble> {
   }
 
   Widget _buildRumbleWidget(BuildContext context, List<double> data,
-      {Widget leading}) {
+      {Widget icon}) {
     return ListTile(
-      leading: leading,
+      leading: icon,
       title: Row(
         children: <Widget>[
           Expanded(

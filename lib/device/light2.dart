@@ -1,6 +1,9 @@
 part of device;
 
-const List<HomeLightPattern> _patterns = [_breath, _blink];
+const Map<String, HomeLightPattern> _patterns = const {
+  'breath': _breath,
+  'blink': _blink,
+};
 final List<int> _range_0F = List.generate(16, (i) => i);
 
 class _PlayerHolder extends ChangeNotifier {
@@ -97,8 +100,8 @@ class _DeviceHomeLight extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('_DeviceLight -> build');
-    return ChangeNotifierProvider(
-      create: (_) => _PatternNotifier(_patterns[0]),
+    return ChangeNotifierProvider<_PatternNotifier>(
+      create: (_) => _PatternNotifier()..updateWith(_patterns['breath'], false),
       child: LabeledDropDownStyle(
         singleLine: false,
         child: Column(
@@ -107,7 +110,7 @@ class _DeviceHomeLight extends StatelessWidget {
             _buildPatternSelector(context),
             const Divider(height: 1),
             Selector<_PatternNotifier, int>(
-              selector: (_, p) => p.value.cycles.length,
+              selector: (_, p) => p.cycles.length,
               builder: (context, length, _) {
                 return ListBody(
                   children: List.generate(
@@ -136,15 +139,14 @@ class _DeviceHomeLight extends StatelessWidget {
         },
       ),
       title: Consumer<_PatternNotifier>(
-        child: const Text('Custom'),
+        child: Text(S.of(context).custom),
         builder: (_, pattern, child) {
-          HomeLightPattern pv = pattern.value;
-          if (!_patterns.contains(pv)) pv = null;
-          return BoxedDropDown<HomeLightPattern>(
-            items: _patterns,
-            value: pv,
+          final String name = pattern.name;
+          return BoxedDropDown<String>(
+            items: _patterns.keys.toList(),
+            value: name,
             hint: child,
-            onChanged: (value) => pattern.value = value,
+            onChanged: (value) => pattern.updateWith(_patterns[value]),
           );
         },
       ),
@@ -172,9 +174,7 @@ class _DeviceHomeLight extends StatelessWidget {
                   label: 'intensity',
                   items: _range_0F,
                   value: value,
-                  onChanged: (v) {
-                    _PatternNotifier.of(context).updateWith(intensity: v);
-                  },
+                  onChanged: (v) => _PatternNotifier.of(context).intensity = v,
                 );
               },
             ),
@@ -188,9 +188,7 @@ class _DeviceHomeLight extends StatelessWidget {
                   label: 'duration',
                   items: _range_0F,
                   value: value,
-                  onChanged: (v) {
-                    _PatternNotifier.of(context).updateWith(duration: v);
-                  },
+                  onChanged: (v) => _PatternNotifier.of(context).duration = v,
                 );
               },
             ),
@@ -204,9 +202,7 @@ class _DeviceHomeLight extends StatelessWidget {
                   label: 'repeat',
                   items: _range_0F,
                   value: value,
-                  onChanged: (v) {
-                    _PatternNotifier.of(context).updateWith(repeat: v);
-                  },
+                  onChanged: (v) => _PatternNotifier.of(context).repeat = v,
                 );
               },
             ),
@@ -256,8 +252,7 @@ class _DeviceHomeLight extends StatelessWidget {
                   items: _range_0F,
                   value: value,
                   onChanged: (v) {
-                    _PatternNotifier.of(context)
-                        .updateCycle(index, intensity: v);
+                    _PatternNotifier.of(context).updateCycle(index, fade: v);
                   },
                 );
               },
@@ -273,8 +268,7 @@ class _DeviceHomeLight extends StatelessWidget {
                   items: _range_0F,
                   value: value,
                   onChanged: (v) {
-                    _PatternNotifier.of(context)
-                        .updateCycle(index, intensity: v);
+                    _PatternNotifier.of(context).updateCycle(index, keep: v);
                   },
                 );
               },
@@ -310,71 +304,104 @@ const HomeLightPattern _blink = HomeLightPattern(
   ],
 );
 
-class _PatternNotifier extends ChangeNotifier
-    implements ValueListenable<HomeLightPattern> {
-  HomeLightPattern _value;
+class _PatternNotifier extends ChangeNotifier {
+  String _name;
+  int _intensity;
+  int _duration;
+  int _repeat;
+  List<HomeLightCycle> _cycles;
 
-  _PatternNotifier(HomeLightPattern pattern) : _value = pattern;
+  _PatternNotifier({
+    String name,
+    int intensity = 0,
+    int duration = 0,
+    int repeat = 0,
+    List<HomeLightCycle> cycles = const [],
+  })  : _name = name,
+        _intensity = intensity,
+        _duration = duration,
+        _repeat = repeat,
+        _cycles = cycles;
 
-  @override
-  HomeLightPattern get value => _value;
+  HomeLightPattern get value => HomeLightPattern(
+        name: _name,
+        intensity: _intensity,
+        duration: _duration,
+        repeat: _repeat,
+        cycles: _cycles,
+      );
 
-  set value(HomeLightPattern v) {
-    if (_value != value) {
-      _value = v;
+  void updateWith(HomeLightPattern pattern, [bool notify = true]) {
+    if (pattern == null) return;
+    _name = pattern.name;
+    _intensity = pattern.intensity;
+    _duration = pattern.duration;
+    _repeat = pattern.repeat;
+    _cycles = List.from(pattern.cycles);
+    if (notify) notifyListeners();
+  }
+
+  int get intensity => _intensity;
+
+  int get duration => _duration;
+
+  int get repeat => _repeat;
+
+  String get name => _name;
+
+  List<HomeLightCycle> get cycles => _cycles;
+
+  set intensity(int value) {
+    if (_intensity != value) {
+      _name = null;
+      _intensity = value;
       notifyListeners();
     }
   }
 
-  static _PatternNotifier of(BuildContext context) =>
-      Provider.of<_PatternNotifier>(context, listen: false);
-
-  void updateWith({
-    int intensity,
-    int duration,
-    int repeat,
-  }) {
-    value = _value.copyWith(
-      intensity: intensity,
-      duration: duration,
-      repeat: repeat,
-    );
-  }
-
-  void updateCycle(
-    int index, {
-    int intensity,
-    int fade,
-    int keep,
-  }) {
-    if (index >= 0 && index < _value.cycles.length) {
-      final HomeLightCycle c = _value.cycles[index].copyWith(
-        intensity: intensity,
-        fade: fade,
-        keep: keep,
-      );
-      if (c != _value.cycles[index]) {
-        _value = _value.copyWith(
-          cycles: List.from(_value.cycles)..[index] = c,
-        );
-        notifyListeners();
-      }
+  set duration(int value) {
+    if (_duration != value) {
+      _name = null;
+      _duration = value;
+      notifyListeners();
     }
   }
 
-  void append() {
-    _value = _value.copyWith(
-      cycles: List<HomeLightCycle>.from(_value.cycles)
-        ..add(HomeLightCycle.zero),
+  set repeat(int value) {
+    if (_repeat != value) {
+      _name = null;
+      _repeat = value;
+      notifyListeners();
+    }
+  }
+
+  void updateCycle(int index, {int intensity, int fade, int keep}) {
+    if (index < 0 || index > _cycles.length - 1) return;
+    _name = null;
+    _cycles[index] = _cycles[index].copyWith(
+      intensity: intensity,
+      fade: fade,
+      keep: keep,
     );
+    notifyListeners();
+  }
+
+  void append() {
+    _name = null;
+    _cycles.add(HomeLightCycle.zero);
     notifyListeners();
   }
 
   void remove([index]) {
-    _value = _value.copyWith(
-      cycles: List<HomeLightCycle>.from(_value.cycles)
-        ..removeAt(index ?? (value.cycles.length - 1)),
-    );
+    if (index > _cycles.length - 1 || index < 0) return;
+    _name = null;
+    _cycles.removeAt(index ?? (_cycles.length - 1));
     notifyListeners();
   }
+
+  @override
+  String toString() => _name;
+
+  static _PatternNotifier of(BuildContext context) =>
+      Provider.of<_PatternNotifier>(context, listen: false);
 }

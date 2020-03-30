@@ -17,58 +17,62 @@ class _DeviceColor extends StatelessWidget {
       BuildContext context, String label, Color color, ValueChanged<Color> cb) {
     showDialog(
       context: context,
-      builder: (_) => Center(
-        child: AlertDialog(
-          contentPadding: const EdgeInsets.all(8),
-          title: Text(label),
-          content: SingleChildScrollView(
-            child: BlockPicker(
-              pickerColor: color,
-              onColorChanged: cb,
-              availableColors: _Profile.colors,
-            ),
-          ),
-          actions: [
-            FlatButton(
-              child: Text('OK'),
-              onPressed: Navigator.of(context).pop,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDetailColorPicker(
-      BuildContext context, String label, Color color, ValueChanged<Color> cb) {
-    showDialog(
-      context: context,
-      builder: (_) => Center(
-        child: AlertDialog(
-          contentPadding: const EdgeInsets.all(8),
-          title: Text(label),
-          content: SingleChildScrollView(
-            child: ColorPicker(
-              pickerColor: color,
-              onColorChanged: cb,
-              colorPickerWidth: 300.0,
-              pickerAreaHeightPercent: 0.7,
-              enableAlpha: false,
-              displayThumbColor: true,
-              showLabel: true,
-              paletteType: PaletteType.hsv,
-              pickerAreaBorderRadius: const BorderRadius.only(
-                topLeft: const Radius.circular(2.0),
-                topRight: const Radius.circular(2.0),
+      builder: (context) => Center(
+        child: DefaultTabController(
+          length: 2,
+          child: AlertDialog(
+            title: Text(label),
+            contentPadding: const EdgeInsets.all(0),
+            content: SingleChildScrollView(
+              child: ExpansionPanelList.radio(
+                children: [
+                  ExpansionPanelRadio(
+                    canTapOnHeader: true,
+                    value: 0,
+                    headerBuilder: (context, isExpanded) => ListTile(
+                      leading:
+                          const Icon(CommunityMaterialIcons.palette_swatch),
+                      title: Text('Block'),
+                    ),
+                    body: BlockPicker(
+                      pickerColor: color,
+                      onColorChanged: cb,
+                      availableColors: _Profile.colors,
+                    ),
+                  ),
+                  ExpansionPanelRadio(
+                    canTapOnHeader: true,
+                    value: 1,
+                    headerBuilder: (context, isExpanded) => ListTile(
+                      leading:
+                          const Icon(CommunityMaterialIcons.eyedropper_variant),
+                      title: Text('Detail'),
+                    ),
+                    body: ColorPicker(
+                      pickerColor: color,
+                      onColorChanged: cb,
+                      //colorPickerWidth: 300.0,
+                      //pickerAreaHeightPercent: 0.7,
+                      enableAlpha: false,
+                      displayThumbColor: true,
+                      showLabel: true,
+                      paletteType: PaletteType.hsv,
+                      pickerAreaBorderRadius: const BorderRadius.only(
+                        topLeft: const Radius.circular(2.0),
+                        topRight: const Radius.circular(2.0),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+            actions: [
+              FlatButton(
+                child: Text('OK'),
+                onPressed: Navigator.of(context).pop,
+              ),
+            ],
           ),
-          actions: [
-            FlatButton(
-              child: const Text('OK'),
-              onPressed: Navigator.of(context).pop,
-            ),
-          ],
         ),
       ),
     );
@@ -95,7 +99,28 @@ class _DeviceColor extends StatelessWidget {
 
   Widget _buildProfileSelector(BuildContext context) {
     return ListTile(
-      leading: const Icon(Icons.palette),
+      contentPadding: const EdgeInsets.only(right: 16),
+      leading: PopupMenuButton<String>(
+        icon: const Icon(CommunityMaterialIcons.palette_outline),
+        itemBuilder: (context) => [
+          PopupMenuItem<String>(
+            value: 'save',
+            child: Text(S.of(context).backup),
+          ),
+          PopupMenuItem<String>(
+            value: 'restore',
+            child: Text(S.of(context).restore),
+          ),
+        ],
+        onSelected: (value) {
+          switch (value) {
+            case 'save':
+              break;
+            case 'restore':
+              break;
+          }
+        },
+      ),
       title: Consumer<_ProfileNotifier>(
         child: Text(S.of(context).custom),
         builder: (context, profile, child) {

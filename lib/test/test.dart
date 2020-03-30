@@ -1,15 +1,19 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
-
+import 'package:vector_math/vector_math_64.dart' as v;
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:path_drawing/path_drawing.dart';
-import 'bluetooth/bluetooth.dart';
-import 'generated/i18n.dart';
-import 'bloc.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'model.dart';
+import '../bluetooth/bluetooth.dart';
+import '../generated/i18n.dart';
+import '../bloc.dart';
 
 class TestApp extends StatelessWidget {
   @override
@@ -34,7 +38,7 @@ class TestApp extends StatelessWidget {
             localizationsDelegates: Config.localizationsDelegates,
             supportedLocales: Config.supportedLocales,
             localeResolutionCallback: config.localeResolutionCallback,
-            home: _SvgHome(),
+            home: _WebHome(),
             builder: (context, child) {
               return MediaQuery(
                 data: MediaQuery.of(context).copyWith(
@@ -535,5 +539,77 @@ class _DetailState extends State<_Detail> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     print('_Detail -> didChangeDependencies');
+  }
+}
+
+const String kInitPage = '''
+<!DOCTYPE HTML>
+<html>
+<body>
+<canvas id="my-canvas" width="300" height="300"></canvas>
+</body>
+</html>
+''';
+
+class _WebHome extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final Completer<WebViewController> _controller =
+        Completer<WebViewController>();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('WebView'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.restore),
+        onPressed: () {
+          _controller.future.then((value) {
+            value.evaluateJavascript('window.resetModel();');
+          });
+        },
+      ),
+      body: GestureDetector(
+        onHorizontalDragUpdate: (detail) {
+          _controller.future.then((value) {
+            value.evaluateJavascript(
+                'window.rotateY(${detail.delta.dx / pi / 2});\nwindow.render();');
+          });
+        },
+        onVerticalDragUpdate: (detail) {
+          _controller.future.then((value) {
+            value.evaluateJavascript(
+                'window.rotateX(${detail.delta.dy / pi / 2});\nwindow.render();');
+          });
+        },
+        child: WebView(
+          initialUrl:
+              'data:text/html;base64,${base64Encode(const Utf8Encoder().convert(kInitPage))}',
+          javascriptMode: JavascriptMode.unrestricted,
+          onWebViewCreated: (WebViewController webViewController) {
+            _controller.complete(webViewController);
+          },
+          onPageStarted: (url) => print('Page started loading: $url'),
+          onPageFinished: (url) {
+            print('Page finished loading: $url');
+            _controller.future.then((value) async {
+              var s = DateTime.now().millisecondsSinceEpoch;
+              String js = await rootBundle.loadString('assets/webgl/main.js');
+              var obj = await rootBundle.load('assets/webgl/model/jc_l.glb');
+              var e = DateTime.now().millisecondsSinceEpoch;
+              print('load string use ${e - s} ms');
+              value.evaluateJavascript('''$js
+              window.parse(${obj.buffer.asUint8List()});
+              window.render();''').then((value) {
+                var t = DateTime.now().millisecondsSinceEpoch;
+                print('execute js use ${t - s} ms');
+              });
+              var t = DateTime.now().millisecondsSinceEpoch;
+              print('load js use ${t - s} ms');
+            });
+          },
+          gestureNavigationEnabled: false,
+        ),
+      ),
+    );
   }
 }

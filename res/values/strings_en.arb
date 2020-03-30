@@ -41,5 +41,7 @@
   "profile_body": "Body",
   "profile_button": "Button",
   "profile_left_grip": "Left grip",
-  "profile_right_grip": "Right grip"
+  "profile_right_grip": "Right grip",
+  "backup": "Backup",
+  "restore": "Restore"
 }

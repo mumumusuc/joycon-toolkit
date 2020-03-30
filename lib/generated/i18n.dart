@@ -27,6 +27,7 @@ class S implements WidgetsLocalizations {
   String get action_ok => "OK";
   String get action_settings => "Settings";
   String get app_title => "Joy-Con toolkit";
+  String get backup => "Backup";
   String get bottom_label_color => "Color";
   String get bottom_label_general => "General";
   String get bottom_label_light => "Light";
@@ -59,6 +60,7 @@ class S implements WidgetsLocalizations {
   String get profile_button => "Button";
   String get profile_left_grip => "Left grip";
   String get profile_right_grip => "Right grip";
+  String get restore => "Restore";
   String get theme_mode_dark => "Dark";
   String get theme_mode_light => "Light";
   String get theme_mode_system => "System";
@@ -76,6 +78,8 @@ class $zh extends S {
   @override
   TextDirection get textDirection => TextDirection.ltr;
 
+  @override
+  String get backup => "备份";
   @override
   String get option_debug => "调试";
   @override
@@ -112,6 +116,8 @@ class $zh extends S {
   String get option_title => "设置";
   @override
   String get option_theme_mode_desc => "选择主题模式";
+  @override
+  String get restore => "还原";
   @override
   String get app_title => "Joy-Con工具";
   @override
