@@ -15,7 +15,7 @@
 #include <sstream>
 #include <thread>
 
-#include "../modules/bluez/gutil.h"
+#include "../modules/bluez5_util/gutil.h"
 
 namespace {
 using namespace bluez;

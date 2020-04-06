@@ -6,7 +6,7 @@
 # Executable name.
 BINARY_NAME=joycon
 # Any extra source files to build.
-EXTRA_SOURCES= joycon_plugin.cc ../modules/bluez/gutil.cc
+EXTRA_SOURCES= joycon_plugin.cc ../modules/bluez5_util/gutil.cc
 # Paths of any additional libraries to be bundled in the output directory.
 EXTRA_BUNDLED_LIBRARIES=
 # Extra flags (e.g., for library dependencies).
