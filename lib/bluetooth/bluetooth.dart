@@ -80,15 +80,16 @@ class Bluetooth {
   Future<dynamic> _handler(dynamic msg) async {
     if (callbacks.isEmpty) return null;
     if (!(msg is Map)) return null;
-
     int event = msg['event'];
-    // adapter event
     if (AdapterState._isAdapterState(event)) {
-      callbacks
-          .forEach((it) => it.onAdapterStateChanged(AdapterState._wrap(event)));
+      callbacks.forEach(
+        (it) => it.onAdapterStateChanged(AdapterState._wrap(event)),
+      );
     } else if (DeviceState._isDeviceState(event)) {
-      callbacks.forEach((it) => it.onDeviceStateChanged(
-          BluetoothDevice.fromMap(msg), DeviceState._wrap(event)));
+      var state = DeviceState._wrap(event);
+      callbacks.forEach(
+        (it) => it.onDeviceStateChanged(BluetoothDevice.fromMap(msg), state),
+      );
     }
     return null;
   }
@@ -108,7 +109,8 @@ class AdapterState {
   static const AdapterState NONE = AdapterState._(0, 'None');
   static const AdapterState DISABLED = AdapterState._(0x1, 'Disabled');
   static const AdapterState ENABLED = AdapterState._(0x2, 'Enabled');
-  static const AdapterState DISCOVERY_OFF = AdapterState._(0x3, 'Discovery off');
+  static const AdapterState DISCOVERY_OFF =
+      AdapterState._(0x3, 'Discovery off');
   static const AdapterState DISCOVERY_ON = AdapterState._(0x4, 'Discovery on');
   static const AdapterState TURNING_ON = AdapterState._(0x5, 'Turning on');
   static const AdapterState TURNING_OFF = AdapterState._(0x6, 'Turning off');
@@ -174,7 +176,7 @@ class DeviceState {
   @override
   bool operator ==(dynamic other) {
     if (other.runtimeType != runtimeType) return false;
-    return other._value == _value;
+    return other._value == _value && other._name == _name;
   }
 
   @override
@@ -214,23 +216,25 @@ class BluetoothDevice {
   final String address;
   final DeviceState state;
 
-  const BluetoothDevice._(
-      {@required this.key,
-      @required this.name,
-      @required this.address,
-      this.state})
-      : assert(key != null),
+  const BluetoothDevice._({
+    @required this.key,
+    @required this.name,
+    @required this.address,
+    this.state,
+  })  : assert(key != null),
         assert(name != null),
         assert(address != null);
 
   factory BluetoothDevice.fromMap(Map<dynamic, dynamic> data) {
     print("create form map $data");
-    int state = data['state'];
+    if (!data.containsKey('key')) {
+      return null;
+    }
     return BluetoothDevice._(
       key: data['key'],
       name: data['name'],
       address: data['address'],
-      state: DeviceState._wrap(state),
+      state: DeviceState._wrap(data['state']),
     );
   }
 

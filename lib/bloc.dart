@@ -1,6 +1,5 @@
 library bloc;
 
-import 'dart:collection';
 import 'package:flutter/scheduler.dart' show timeDilation;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -89,7 +88,19 @@ class Bloc extends ChangeNotifier with BluetoothCallbackMixin {
         _config = kDefaultConfig,
         _record = BluetoothDeviceRecord._() {
     bluetooth.addListener(this);
-    Bluetooth.getAdapterState().then((v) => onAdapterStateChanged(v));
+    // onAdapterStateChanged(v)
+    Bluetooth.getAdapterState().then((state) {
+      if (state == AdapterState.ENABLED ||
+          state == AdapterState.DISCOVERY_ON ||
+          state == AdapterState.DISCOVERY_OFF) {
+        Bluetooth.getDevices().then((value) {
+          if (_record._appendOrUpdate(value.toList())) {
+            _record = _record.copyWith();
+            notifyListeners();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -103,9 +114,7 @@ class Bloc extends ChangeNotifier with BluetoothCallbackMixin {
     print('onAdapterStateChanged -> $state');
     if (_adapter != state) {
       _adapter = state;
-      if (state == AdapterState.ENABLED ||
-          state == AdapterState.DISCOVERY_ON ||
-          state == AdapterState.DISCOVERY_OFF) {
+      if (state == AdapterState.ENABLED && _adapter == AdapterState.DISABLED) {
         Bluetooth.getDevices().then((value) {
           if (_record._appendOrUpdate(value.toList()))
             _record = _record.copyWith();
@@ -117,7 +126,7 @@ class Bloc extends ChangeNotifier with BluetoothCallbackMixin {
 
   @override
   void onDeviceStateChanged(BluetoothDevice device, DeviceState state) {
-    print('onDeviceStateChanged -> $state');
+    print('Bloc onDeviceStateChanged -> $state');
     if (record._appendOrUpdate([device])) {
       _record = _record.copyWith();
       notifyListeners();
@@ -208,11 +217,14 @@ class BluetoothDeviceRecord {
     if (data?.isNotEmpty != true) return false;
     return data.map<bool>((e) {
       var i = _data.indexOf(e);
+      print("_appendOrUpdate -> index = $i");
       if (i < 0) {
         _data.add(e);
         return true;
       } else if (_data[i].state != e.state) {
-        _data.replaceRange(i, i + 1, [e]);
+        _data
+          ..removeAt(i)
+          ..insert(i, e);
         return true;
       }
       return false;

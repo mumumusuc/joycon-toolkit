@@ -104,20 +104,20 @@ class _HomePageState extends PermissionState<HomePage> {
                       ),
                     );
                   return SliverPadding(
-                    padding:
-                        const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           return Selector<BluetoothDeviceRecord,
                               BluetoothDevice>(
                             selector: (_, record) => record.records[index],
-                            shouldRebuild: (p, n) => p.state != n.state,
+                            shouldRebuild: (p, n) =>
+                                p != n || p.state != n.state,
                             builder: (context, data, child) {
                               print('build device selector -> $data');
                               return Padding(
                                 padding: const EdgeInsets.all(4),
-                                child: _DeviceCard(data, data.state),
+                                child: _DeviceCard(data),
                               );
                             },
                           );
@@ -371,9 +371,8 @@ class _DiscoveryWidgetState extends State<_DiscoveryWidget>
 
 class _DeviceCard extends StatefulWidget {
   final BluetoothDevice device;
-  final DeviceState state;
 
-  const _DeviceCard(this.device, this.state, {Key key}) : super(key: key);
+  const _DeviceCard(this.device, {Key key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _DeviceCardState();
@@ -393,9 +392,9 @@ class _DeviceCardState extends State<_DeviceCard>
 
   BluetoothDevice get _device => widget.device;
 
-  DeviceState get _state => widget.state;
+  DeviceState get _state => widget.device.state;
 
-  Widget get _pairedTrailing => const Icon(Icons.bluetooth_connected);
+  //Widget get _pairedTrailing => const Icon(Icons.bluetooth_connected);
 
   Widget get _connectedTrailing => IconButton(
         icon: const Icon(Icons.close),
@@ -477,13 +476,14 @@ class _DeviceCardState extends State<_DeviceCard>
 
   @override
   void didUpdateWidget(_DeviceCard oldWidget) {
-    print('_DeviceCard -> didUpdateWidget: ${oldWidget.state} -> $_state');
-    if (_state != oldWidget.state) {
+    print(
+        '_DeviceCard -> didUpdateWidget: ${oldWidget.device.state} -> $_state');
+    if (_state != oldWidget.device.state) {
       _lastTailing = _getStateTrailing(_state);
       _thisTailing = _getStateTrailing(_state);
-      _lastState = _getStateString(oldWidget.state);
+      _lastState = _getStateString(oldWidget.device.state);
       _thisState = _getStateString(_state);
-      _color.begin = _getStateColor(oldWidget.state);
+      _color.begin = _getStateColor(oldWidget.device.state);
       _color.end = _getStateColor(_state);
       _controller.reset();
       _controller.forward();
@@ -537,11 +537,10 @@ class _DeviceCardState extends State<_DeviceCard>
           ],
         ),
         onTap: () {
-          if (_state == DeviceState.CONNECTED) {
+          if (_state == DeviceState.CONNECTED)
             _open();
-          } else {
+          else
             Bluetooth.connect(_device, true);
-          }
         },
         trailing: RepaintBoundary(child: _buildTrailing()),
       ),
@@ -564,14 +563,12 @@ class _DeviceCardState extends State<_DeviceCard>
       closedColor: _color.evaluate(_curve),
       closedElevation: 0,
       closedBuilder: (_, open) {
-        //print('closedBuilder');
         _open = open;
         return from;
       },
       openColor: theme.scaffoldBackgroundColor,
       openElevation: 0,
       openBuilder: (c, __) {
-        //print('openBuilder');
         return to;
       },
     );
