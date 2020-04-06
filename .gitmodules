@@ -1,0 +1,3 @@
+[submodule "modules/bluez5_util"]
+	path = modules/bluez5_util
+	url = git@github.com:mumumusuc/bluez5_util.git
