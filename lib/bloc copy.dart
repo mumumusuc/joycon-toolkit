@@ -107,8 +107,8 @@ class Bloc extends ChangeNotifier with BluetoothCallbackMixin {
           state == AdapterState.DISCOVERY_ON ||
           state == AdapterState.DISCOVERY_OFF) {
         Bluetooth.getDevices().then((value) {
-          if (_record._appendOrUpdate(value.toList()))
-            _record = _record.copyWith();
+          var it = value.toList().asMap().map((_, v) => MapEntry(v, v.state));
+          if (_record._appendOrUpdate(it)) _record = _record.copyWith();
         });
       }
       notifyListeners();
@@ -118,7 +118,7 @@ class Bloc extends ChangeNotifier with BluetoothCallbackMixin {
   @override
   void onDeviceStateChanged(BluetoothDevice device, DeviceState state) {
     print('onDeviceStateChanged -> $state');
-    if (record._appendOrUpdate([device])) {
+    if (record._appendOrUpdate({device: state})) {
       _record = _record.copyWith();
       notifyListeners();
     }
@@ -183,36 +183,40 @@ class DeviceType {
 
 class BluetoothDeviceRecord {
   final int _key;
-  final List<BluetoothDevice> _data;
+  final Map<BluetoothDevice, DeviceState> _data;
 
-  BluetoothDeviceRecord._({int key = 0, List<BluetoothDevice> data})
+  BluetoothDeviceRecord._({int key = 0, Map<BluetoothDevice, DeviceState> data})
       : _key = key,
-        _data = data ?? [];
+        _data = data ?? LinkedHashMap();
 
-  BluetoothDeviceRecord copyWith({List<BluetoothDevice> data}) {
+  BluetoothDeviceRecord copyWith({Map<BluetoothDevice, DeviceState> data}) {
     return BluetoothDeviceRecord._(key: _key + 1, data: data ?? _data);
   }
 
-  List<BluetoothDevice> get records => _data;
+  List<MapEntry<BluetoothDevice, DeviceState>> get records =>
+      _data.entries.toList(growable: false);
 
   int get length => _data.length;
 
-  DeviceState operator [](dynamic index) {
-    if (index is int) return _data[index].state;
-    if (index is BluetoothDevice)
-      return _data.firstWhere((e) => e == index).state;
-    throw FormatException('Unsupported paramater type ${index.runtimeType}');
+  DeviceState operator [](dynamic device) {
+    if (device is int) {
+      //return records[device].value;
+      return records[device].key.state;
+    }
+    if (device is BluetoothDevice) {
+      return _data[device];
+    }
+    throw FormatException('Unsupported paramater type ${device.runtimeType}');
   }
 
-  bool _appendOrUpdate(List<BluetoothDevice> data) {
-    if (data?.isNotEmpty != true) return false;
-    return data.map<bool>((e) {
-      var i = _data.indexOf(e);
-      if (i < 0) {
-        _data.add(e);
-        return true;
-      } else if (_data[i].state != e.state) {
-        _data.replaceRange(i, i + 1, [e]);
+  bool _appendOrUpdate(Map<BluetoothDevice, DeviceState> data) {
+    if (data.isEmpty) return false;
+    return data.entries.map((e) {
+      print('_appendOrUpdate -> $e');
+      // TODO:
+      if (_data[e.key] != e.value) {
+        _data[e.key] = e.value;
+        _data.keys.firstWhere((it) => it == e.key).state = e.key.state;
         return true;
       }
       return false;

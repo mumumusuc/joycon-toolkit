@@ -9,6 +9,7 @@
 
 #include "flutter/generated_plugin_registrant.h"
 #include "window_configuration.h"
+#include "joycon_plugin.h"
 
 namespace {
 
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
   RegisterPlugins(&flutter_controller);
-
+  FlutterJoyconPluginRegisterWithRegistrar(flutter_controller.GetRegistrarForPlugin("FlutterJoyconPlugin"));
   // Run until the window is closed.
   while (flutter_controller.RunEventLoopWithTimeout(
       std::chrono::milliseconds::max())) {

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
-import 'package:vector_math/vector_math_64.dart' as v;
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +9,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:path_drawing/path_drawing.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'model.dart';
 import '../bluetooth/bluetooth.dart';
 import '../generated/i18n.dart';
 import '../bloc.dart';
@@ -38,7 +36,7 @@ class TestApp extends StatelessWidget {
             localizationsDelegates: Config.localizationsDelegates,
             supportedLocales: Config.supportedLocales,
             localeResolutionCallback: config.localeResolutionCallback,
-            home: _WebHome(),
+            home: _ContainerHome(),
             builder: (context, child) {
               return MediaQuery(
                 data: MediaQuery.of(context).copyWith(
@@ -281,17 +279,17 @@ class _Home extends StatelessWidget {
                 shrinkWrap: true,
                 itemCount: length,
                 itemBuilder: (context, index) {
-                  return Selector<BluetoothDeviceRecord, BluetoothDeviceState>(
+                  return Selector<BluetoothDeviceRecord, DeviceState>(
                     selector: (_, r) => r[index],
                     builder: (context, state, _) {
                       final bundle =
                           BluetoothDeviceRecord.of(context).records[index];
                       final Widget child = ListTile(
                         leading: const Icon(Icons.games),
-                        title: Text(bundle.key.toString()),
-                        subtitle: Text(bundle.value.toString()),
+                        title: Text(bundle.name),
+                        subtitle: Text(bundle.address),
                       );
-                      final Widget open = _Detail(device: bundle.key);
+                      final Widget open = _Detail(device: bundle);
                       return OpenContainer(
                         transitionDuration: const Duration(seconds: 5),
                         closedBuilder: (context, open) => child,
@@ -318,9 +316,7 @@ class _Home extends StatelessWidget {
         false,
         onPressed: () {
           Bloc.of(context).inject(
-            BluetoothDevice(name: 'device', address: '0'),
-            BluetoothDeviceState.CONNECTED,
-          );
+              BluetoothDevice.test('device', '0'), DeviceState.CONNECTED);
         },
       ),
     );
@@ -495,12 +491,13 @@ class _DetailState extends State<_Detail> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Selector<BluetoothDeviceRecord, BluetoothDeviceState>(
-        selector: (_, r) => r[widget.device],
+      body: Selector<BluetoothDeviceRecord, DeviceState>(
+        selector: (_, r) =>
+            r.records.firstWhere((e) => e == widget.device).state,
         child: Center(child: Text(widget.device.toString())),
         builder: (context, state, child) {
           print('check device state');
-          if (state != BluetoothDeviceState.CONNECTED) {
+          if (state != DeviceState.CONNECTED) {
             WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
               showDialog(
                   context: context,
@@ -527,9 +524,7 @@ class _DetailState extends State<_Detail> {
         child: const Icon(Icons.close),
         onPressed: () {
           Bloc.of(context).inject(
-            BluetoothDevice(name: 'device', address: '0'),
-            BluetoothDeviceState.DISCONNECTING,
-          );
+              BluetoothDevice.test('device', '0'), DeviceState.DISCONNECTING);
         },
       ),
     );
@@ -609,6 +604,42 @@ class _WebHome extends StatelessWidget {
           },
           gestureNavigationEnabled: false,
         ),
+      ),
+    );
+  }
+}
+
+// test OpenContainer performance
+class _ContainerHome extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    Widget from = ListTile(title: Text('from'));
+    Widget to = Scaffold(
+      appBar: AppBar(),
+      body: Text('to'),
+    );
+    return Scaffold(
+      appBar: AppBar(),
+      body: ListView(
+        children: <Widget>[
+          OpenContainer(
+            tappable: true,
+            //transitionType: ContainerTransitionType.fadeThrough,
+            transitionDuration: kDuration,
+            closedShape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            closedColor: Theme.of(context).accentColor,
+            closedElevation: 4,
+            closedBuilder: (_, open) {
+              return from;
+            },
+            openElevation: 0,
+            openBuilder: (c, __) {
+              //print('openBuilder');
+              return to;
+            },
+          ),
+        ],
       ),
     );
   }

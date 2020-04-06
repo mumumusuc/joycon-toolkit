@@ -7,6 +7,7 @@ class Bluetooth {
   static const BasicMessageChannel _stateChannel = const BasicMessageChannel(
       'com.mumumusuc.libjoycon/bluetooth/state', const StandardMessageCodec());
   static final Bluetooth _instance = Bluetooth._();
+  int _state = _STATE_NONE;
 
   Bluetooth._() {
     _stateChannel.setMessageHandler(_handler);
@@ -45,12 +46,13 @@ class Bluetooth {
   static Future<AdapterState> getAdapterState() {
     return _bluetoothChannel
         .invokeMethod('getAdapterState')
-        .then((value) => AdapterState._wrap(value));
+        .then((value) => _parseAdapterState(value));
   }
 
   static Future<DeviceState> getDeviceState(BluetoothDevice dev) {
-    return _bluetoothChannel.invokeMethod('getDeviceState',
-        {'address': dev.address}).then((value) => DeviceState._wrap(value));
+    return _bluetoothChannel
+        .invokeMethod('getDeviceState', {'address': dev.address}).then(
+            (value) => _parseDeviceState(value, mask: true));
   }
 
   static Future<Set<BluetoothDevice>> getDevices() {
@@ -79,109 +81,61 @@ class Bluetooth {
 
   Future<dynamic> _handler(dynamic msg) async {
     if (callbacks.isEmpty) return null;
-    if (!(msg is Map)) return null;
-
-    int event = msg['event'];
-    // adapter event
-    if (AdapterState._isAdapterState(event)) {
-      callbacks
-          .forEach((it) => it.onAdapterStateChanged(AdapterState._wrap(event)));
-    } else if (DeviceState._isDeviceState(event)) {
-      callbacks.forEach((it) => it.onDeviceStateChanged(
-          BluetoothDevice.fromMap(msg), DeviceState._wrap(event)));
+    if (msg is Map) {
+      int state = msg['state'];
+      //print('bt state = $state');
+      if ((state & _STATE_DEVICE_MASK) == 0) {
+        callbacks.forEach(
+            (it) => it.onAdapterStateChanged(_parseAdapterState(state)));
+      } else {
+        state = state & (~_STATE_DEVICE_MASK);
+        final BluetoothDevice device = BluetoothDevice.fromMap(msg);
+        switch (state) {
+          case _STATE_DISCONNECTED:
+            final DeviceState _state = await getDeviceState(device);
+            callbacks.forEach((it) => it.onDeviceStateChanged(device, _state));
+            break;
+          case _STATE_UNBOND:
+          case _STATE_BONDING:
+          case _STATE_BONDED:
+            if (_state == _STATE_DISCONNECTED || _state == _STATE_NONE) {
+              callbacks.forEach((it) =>
+                  it.onDeviceStateChanged(device, _parseDeviceState(state)));
+            }
+            break;
+          default:
+            callbacks.forEach((it) =>
+                it.onDeviceStateChanged(device, _parseDeviceState(state)));
+            break;
+        }
+      }
+      _state = state;
     }
     return null;
   }
 }
 
-class AdapterState {
-  final int _value;
-  final String _name;
-  const AdapterState._(this._value, this._name);
-  factory AdapterState._wrap(int value) =>
-      value == null ? NONE : values[value & ~_MASK];
-
-  static bool _isAdapterState(int value) =>
-      (value & AdapterState._MASK) == AdapterState._MASK;
-
-  static const int _MASK = 0x20;
-  static const AdapterState NONE = AdapterState._(0, 'None');
-  static const AdapterState DISABLED = AdapterState._(0x1, 'Disabled');
-  static const AdapterState ENABLED = AdapterState._(0x2, 'Enabled');
-  static const AdapterState DISCOVERY_OFF = AdapterState._(0x3, 'Discovery off');
-  static const AdapterState DISCOVERY_ON = AdapterState._(0x4, 'Discovery on');
-  static const AdapterState TURNING_ON = AdapterState._(0x5, 'Turning on');
-  static const AdapterState TURNING_OFF = AdapterState._(0x6, 'Turning off');
-  static List<AdapterState> get values => [
-        NONE,
-        DISABLED,
-        ENABLED,
-        DISCOVERY_OFF,
-        DISCOVERY_ON,
-        TURNING_ON,
-        TURNING_OFF,
-      ];
-  /*    
-  @override
-  bool operator ==(dynamic other) {
-    if (other.runtimeType != runtimeType) return false;
-    return other._value == _value;
-  }
-
-  @override
-  int get hashCode => hashValues(_value, _name);
-  */
-  @override
-  String toString() => 'AdapterState.$_name';
+enum AdapterState {
+  UNKNOWN,
+  ENABLED,
+  TURNING_ON,
+  DISABLED,
+  TURNING_OFF,
+  DISCOVER_OFF,
+  DISCOVER_ON,
 }
 
-class DeviceState {
-  final int _value;
-  final String _name;
-  const DeviceState._(this._value, this._name);
-  factory DeviceState._wrap(int value) =>
-      value == null ? NONE : values[value & ~_MASK];
-
-  static bool _isDeviceState(int value) =>
-      (value & DeviceState._MASK) == DeviceState._MASK;
-
-  static const int _MASK = 0x10;
-  static const DeviceState NONE = DeviceState._(0x0, 'None');
-  static const DeviceState FOUND = DeviceState._(0x1, 'Found');
-  static const DeviceState REMOVE = DeviceState._(0x2, 'Remove');
-  static const DeviceState UNPAIRED = DeviceState._(0x3, 'Unpaired');
-  static const DeviceState UNPAIRING = DeviceState._(0x4, 'Unpairing');
-  static const DeviceState PAIRING = DeviceState._(0x5, 'Pairing');
-  static const DeviceState PAIRED = DeviceState._(0x6, 'Paired');
-  static const DeviceState DISCONNECTED = DeviceState._(0x7, 'Disconnected');
-  static const DeviceState DISCONNECTING = DeviceState._(0x8, 'Disconnecting');
-  static const DeviceState CONNECTING = DeviceState._(0x9, 'Connecting');
-  static const DeviceState CONNECTED = DeviceState._(0xa, 'Connected');
-  static List<DeviceState> get values => [
-        NONE,
-        FOUND,
-        REMOVE,
-        UNPAIRED,
-        UNPAIRING,
-        PAIRING,
-        PAIRED,
-        DISCONNECTED,
-        DISCONNECTING,
-        CONNECTING,
-        CONNECTED,
-      ];
-  /*
-  @override
-  bool operator ==(dynamic other) {
-    if (other.runtimeType != runtimeType) return false;
-    return other._value == _value;
-  }
-
-  @override
-  int get hashCode => hashValues(_value, _name);
-  */
-  @override
-  String toString() => 'DeviceState.$_name';
+enum DeviceState {
+  UNKNOWN,
+  NONE,
+  FOUND,
+  UNPAIRED,
+  PAIRING,
+  PAIRED,
+  DISCONNECTING,
+  DISCONNECTED,
+  CONNECTING,
+  CONNECTED,
 }
 
 class DeviceCategory {
@@ -224,14 +178,18 @@ class BluetoothDevice {
         assert(address != null);
 
   factory BluetoothDevice.fromMap(Map<dynamic, dynamic> data) {
-    print("create form map $data");
-    int state = data['state'];
+    DeviceState state;
+    var value = data['state'];
+    if (value == 0)
+      state = DeviceState.NONE;
+    else if (value == 1)
+      state = DeviceState.PAIRED;
+    else if (value == 2) state = DeviceState.CONNECTED;
     return BluetoothDevice._(
-      key: data['key'],
-      name: data['name'],
-      address: data['address'],
-      state: DeviceState._wrap(state),
-    );
+        key: data['key'],
+        name: data['name'],
+        address: data['address'],
+        state: state);
   }
 
   factory BluetoothDevice.test(String name, String address) {
@@ -251,7 +209,73 @@ class BluetoothDevice {
   int get hashCode => hashValues(name, address);
 
   @override
-  String toString() => '{$name, $address, $state}';
+  String toString() => '{$name, $address}';
+}
+
+// none
+const int _STATE_NONE = 0;
+// adapter state
+const int _STATE_OFF = 10;
+const int _STATE_TURNING_ON = 11;
+const int _STATE_ON = 12;
+const int _STATE_TURNING_OFF = 13;
+const int _STATE_DISCOVERY_OFF = 14;
+const int _STATE_DISCOVERY_ON = 15;
+// device mask
+const int _STATE_DEVICE_MASK = 0x10;
+// device connect state
+const int _STATE_DISCONNECTED = 0;
+const int _STATE_CONNECTING = 1;
+const int _STATE_CONNECTED = 2;
+const int _STATE_DISCONNECTING = 3;
+// device found
+const int _STATE_FOUND_DEVICE = 4;
+// device bond state
+const int _STATE_UNBOND = 10;
+const int _STATE_BONDING = 11;
+const int _STATE_BONDED = 12;
+
+AdapterState _parseAdapterState(int state) {
+  switch (state) {
+    case _STATE_OFF:
+      return AdapterState.DISABLED;
+    case _STATE_TURNING_ON:
+      return AdapterState.TURNING_ON;
+    case _STATE_ON:
+      return AdapterState.ENABLED;
+    case _STATE_TURNING_OFF:
+      return AdapterState.TURNING_OFF;
+    case _STATE_DISCOVERY_OFF:
+      return AdapterState.DISCOVER_OFF;
+    case _STATE_DISCOVERY_ON:
+      return AdapterState.DISCOVER_ON;
+    default:
+      throw FormatException('unkown adapter state : $state');
+  }
+}
+
+DeviceState _parseDeviceState(int state, {bool mask = false}) {
+  if (mask) state = state & (~_STATE_DEVICE_MASK);
+  switch (state) {
+    case _STATE_DISCONNECTED:
+      return DeviceState.DISCONNECTED;
+    case _STATE_CONNECTING:
+      return DeviceState.CONNECTING;
+    case _STATE_CONNECTED:
+      return DeviceState.CONNECTED;
+    case _STATE_DISCONNECTING:
+      return DeviceState.DISCONNECTING;
+    case _STATE_FOUND_DEVICE:
+      return DeviceState.FOUND;
+    case _STATE_UNBOND:
+      return DeviceState.UNPAIRED;
+    case _STATE_BONDING:
+      return DeviceState.PAIRING;
+    case _STATE_BONDED:
+      return DeviceState.PAIRED;
+    default:
+      throw FormatException('unkown device state : $state');
+  }
 }
 
 typedef OnAdapterStateChanged = void Function(AdapterState);

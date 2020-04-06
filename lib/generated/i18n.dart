@@ -38,6 +38,7 @@ class S implements WidgetsLocalizations {
   String get device_state_disconnecting => "disconnecting";
   String get device_state_paired => "paired";
   String get device_state_pairing => "pairing";
+  String get device_state_unknown => "unknown";
   String get no_device => "no device found";
   String get option_debug => "Debug";
   String get option_debug_desc => "enable debug";
@@ -140,6 +141,8 @@ class $zh extends S {
   String get no_device => "未发现设备";
   @override
   String get profile_right_grip => "右握把";
+  @override
+  String get device_state_unknown => "未知";
   @override
   String get option_language => "语言";
   @override

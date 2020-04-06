@@ -91,6 +91,40 @@ class _DeviceButton extends StatelessWidget {
 }
 
 class _DeviceAxis extends _Unimplemented {
+  final Controller controller;
+  const _DeviceAxis(this.controller);
+
+  static String _getInitUrl(Color bgColor) {
+    final String page = '''
+<!DOCTYPE HTML>
+<html>
+<style type="text/css">
+  html, body {
+      margin: 0;
+      padding: 0;
+      background: ${bgColor.value.toRadixString(16).replaceFirst('ff', '#')};
+  }
+  #my-canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+  }
+</style>
+<body>
+  <canvas id="my-canvas"></canvas>
+</body>
+</html>
+''';
+    return 'data:text/html;base64,${base64Encode(const Utf8Encoder().convert(page))}';
+  }
+
+  static String _getAsset(DeviceCategory cate){
+    if(cate == DeviceCategory.JoyCon_R)
+      return 'assets/webgl/model/jc_r.glb';
+    else
+      return 'assets/webgl/model/jc_l.glb';
+  }
+
   @override
   String get title => 'Axis';
 
@@ -99,6 +133,7 @@ class _DeviceAxis extends _Unimplemented {
 
   @override
   Widget build(BuildContext context) {
+    final Completer<WebViewController> _handle = Completer<WebViewController>();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -106,12 +141,34 @@ class _DeviceAxis extends _Unimplemented {
         const Divider(height: 1),
         AspectRatio(
           aspectRatio: 1,
-          child: Center(
-            child: IconButton(
-              iconSize: 48,
-              icon: const Icon(Icons.play_circle_outline),
-              onPressed: () {},
-            ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              // Webview now only implemented on Android and iOS
+              if (Platform.isAndroid || Platform.isIOS)
+                WebView(
+                  initialUrl: _getInitUrl(Theme.of(context).cardColor),
+                  javascriptMode: JavascriptMode.unrestricted,
+                  onWebViewCreated: (c) => _handle.complete(c),
+                ),
+              IconButton(
+                iconSize: 48,
+                icon: const Icon(Icons.play_circle_outline),
+                onPressed: () async {
+                  // TODO: load 3d model
+                  var js = await Future.wait([
+                    rootBundle.loadString('assets/webgl/main.js'),
+                    rootBundle.load(_getAsset(controller.category)),
+                  ]).then((value) {
+                    return '''
+                    ${value[0]}
+                    window.parse(${(value[1] as ByteData).buffer.asUint8List()});
+                    window.render();''';
+                  });
+                  _handle.future.then((value) => value.evaluateJavascript(js));
+                },
+              ),
+            ],
           ),
         ),
         const Divider(height: 1),
@@ -172,6 +229,7 @@ class _DeviceLogger extends _Unimplemented {
 }
 
 abstract class _Unimplemented extends StatelessWidget {
+  const _Unimplemented();
   String get title;
 
   Widget get icon;

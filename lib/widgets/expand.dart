@@ -51,7 +51,7 @@ class _ExpandWidgetState extends State<ExpandWidget>
 
   @override
   Widget build(BuildContext context) {
-    print('FadeWidget -> build');
+    print('ExpandWidget -> build');
     /*
     Widget fade = _Fade(
       heightFactor: _height.value,
@@ -63,6 +63,7 @@ class _ExpandWidgetState extends State<ExpandWidget>
       animation: _controller,
       child: widget.child,
       builder: (context, child) {
+        if (_height.value == 0) return const SizedBox();
         return _Expand(
           heightFactor: _height.value,
           child: child,

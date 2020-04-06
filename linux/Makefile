@@ -51,7 +51,8 @@ WRAPPER_ROOT=$(abspath $(FLUTTER_EPHEMERAL_DIR)/cpp_client_wrapper_glfw)
 WRAPPER_SOURCES= \
 	$(WRAPPER_ROOT)/flutter_window_controller.cc \
 	$(WRAPPER_ROOT)/plugin_registrar.cc \
-	$(WRAPPER_ROOT)/engine_method_result.cc
+	$(WRAPPER_ROOT)/engine_method_result.cc \
+	$(WRAPPER_ROOT)/standard_codec.cc
 
 # Use abspath for extra sources, which may also contain relative paths (see
 # note above about WRAPPER_ROOT).
@@ -84,7 +85,6 @@ LDFLAGS=-L$(BUNDLE_LIB_DIR) \
 # Intermediate files.
 OBJ_FILES=$(SOURCES:%.cc=$(OBJ_DIR)/%.o)
 DEPENDENCY_FILES=$(OBJ_FILES:%.o=%.d)
-
 # Targets
 
 .PHONY: all
@@ -104,6 +104,10 @@ sync: $(FLUTTER_CONFIG_FILE)
 
 .PHONY: bundle
 bundle: $(ICU_DATA_OUT) $(ALL_LIBS_OUT) bundleflutterassets
+
+$(LIBRARY_OUT): $(OBJ_FILES)
+	mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ $(LDFLAGS) -o $@
 
 $(BIN_OUT): $(OBJ_FILES) $(ALL_LIBS_OUT)
 	mkdir -p $(@D)

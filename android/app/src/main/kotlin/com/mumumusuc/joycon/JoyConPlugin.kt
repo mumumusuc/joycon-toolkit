@@ -337,7 +337,7 @@ class JoyConPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChanne
         val cb = mStateCallback ?: return
         if (state.and(BT_STATE_DEVICE_MASK) != 0)
             if (!filterDevice(name ?: "")) return
-        cb.send(mapOf(Pair("name", name), Pair("address", address), Pair("state", state)))
+        cb.send(mapOf(Pair("key",address),Pair("name", name), Pair("address", address), Pair("state", state)))
     }
 
     private fun emitLocationServiceStatus(enabled: Boolean) {

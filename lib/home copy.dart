@@ -109,15 +109,15 @@ class _HomePageState extends PermissionState<HomePage> {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          return Selector<BluetoothDeviceRecord,
-                              BluetoothDevice>(
+                          return Selector<BluetoothDeviceRecord, dynamic>(
                             selector: (_, record) => record.records[index],
-                            shouldRebuild: (p, n) => p.state != n.state,
+                            shouldRebuild: (p, n) =>
+                                p.key != n.key || p.value != n.value,
                             builder: (context, data, child) {
                               print('build device selector -> $data');
                               return Padding(
                                 padding: const EdgeInsets.all(4),
-                                child: _DeviceCard(data, data.state),
+                                child: _DeviceCard(data.key, data.key.state),
                               );
                             },
                           );

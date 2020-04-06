@@ -7,6 +7,7 @@
   "device_state_connecting": "connecting",
   "device_state_connected": "connected",
   "device_state_disconnecting": "disconnecting",
+  "device_state_unknown": "unknown",
   "about_desc": "Learn more about \"Joy-Con toolkit\" at",
   "perm_bluetooth": "Enable bluetooth",
   "perm_permission_1": "Android 10 (or higher) need ",
