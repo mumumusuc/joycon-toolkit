@@ -1,71 +1,244 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
-enum BluetoothState {
-  UNKNOWN,
-  ENABLED,
-  TURNING_ON,
-  DISABLED,
-  TURNING_OFF,
-  DISCOVER_OFF,
-  DISCOVER_ON,
+class Bluetooth {
+  static const MethodChannel _bluetoothChannel =
+      const MethodChannel('com.mumumusuc.libjoycon/bluetooth');
+  static const BasicMessageChannel _stateChannel = const BasicMessageChannel(
+      'com.mumumusuc.libjoycon/bluetooth/state', const StandardMessageCodec());
+  static final Bluetooth _instance = Bluetooth._();
+
+  Bluetooth._() {
+    _stateChannel.setMessageHandler(_handler);
+  }
+
+  factory Bluetooth() => _instance;
+
+  final Set<BluetoothCallbackMixin> callbacks = Set();
+
+  void addListener(BluetoothCallbackMixin cb) {
+    if (cb == null) return;
+    callbacks.add(cb);
+  }
+
+  void removeListener(BluetoothCallbackMixin cb) {
+    if (cb == null) return;
+    callbacks.remove(cb);
+  }
+
+  static void enable(bool on) async {
+    _bluetoothChannel.invokeMethod('enable', {'on': on});
+  }
+
+  static void discovery(bool on) {
+    _bluetoothChannel.invokeMethod('discovery', {'on': on});
+  }
+
+  static void pair(BluetoothDevice dev) {
+    _bluetoothChannel.invokeMethod('pair', {'key': dev.key});
+  }
+
+  static void connect(BluetoothDevice dev, bool on) {
+    _bluetoothChannel.invokeMethod('connect', {'key': dev.key, 'on': on});
+  }
+
+  static Future<AdapterState> getAdapterState() {
+    return _bluetoothChannel
+        .invokeMethod('getAdapterState')
+        .then((value) => AdapterState._wrap(value));
+  }
+
+  static Future<DeviceState> getDeviceState(BluetoothDevice dev) {
+    return _bluetoothChannel.invokeMethod('getDeviceState',
+        {'address': dev.address}).then((value) => DeviceState._wrap(value));
+  }
+
+  static Future<Set<BluetoothDevice>> getDevices() {
+    return _bluetoothChannel
+        .invokeMethod<List<dynamic>>('getDevices')
+        .then<Set<BluetoothDevice>>((data) {
+      return data.map((it) => BluetoothDevice.fromMap(it)).toSet();
+    });
+  }
+
+  static Future<Set<BluetoothDevice>> getPairedDevices() {
+    return _bluetoothChannel
+        .invokeMethod<List<dynamic>>('getPairedDevices')
+        .then<Set<BluetoothDevice>>((data) {
+      return data.map((it) => BluetoothDevice.fromMap(it)).toSet();
+    });
+  }
+
+  static Future<Set<BluetoothDevice>> getConnectedDevices() {
+    return _bluetoothChannel
+        .invokeMethod<List<dynamic>>('getConnectedDevices')
+        .then<Set<BluetoothDevice>>((data) {
+      return data.map((it) => BluetoothDevice.fromMap(it)).toSet();
+    });
+  }
+
+  Future<dynamic> _handler(dynamic msg) async {
+    if (callbacks.isEmpty) return null;
+    if (!(msg is Map)) return null;
+
+    int event = msg['event'];
+    // adapter event
+    if (AdapterState._isAdapterState(event)) {
+      callbacks
+          .forEach((it) => it.onAdapterStateChanged(AdapterState._wrap(event)));
+    } else if (DeviceState._isDeviceState(event)) {
+      callbacks.forEach((it) => it.onDeviceStateChanged(
+          BluetoothDevice.fromMap(msg), DeviceState._wrap(event)));
+    }
+    return null;
+  }
 }
 
-enum BluetoothDeviceState {
-  UNKNOWN,
-  NONE,
-  FOUND,
-  UNPAIRED,
-  PAIRING,
-  PAIRED,
-  DISCONNECTING,
-  DISCONNECTED,
-  CONNECTING,
-  CONNECTED,
-}
+class AdapterState {
+  final int _value;
+  final String _name;
+  const AdapterState._(this._value, this._name);
+  factory AdapterState._wrap(int value) =>
+      value == null ? NONE : values[value & ~_MASK];
 
-typedef _OnAdapterStateChanged = void Function(BluetoothState state);
-typedef _OnDeviceStateChanged = void Function(
-    BluetoothDevice device, BluetoothDeviceState state);
+  static bool _isAdapterState(int value) =>
+      (value & AdapterState._MASK) == AdapterState._MASK;
 
-mixin BluetoothCallbackMixin {
-  void onAdapterStateChanged(BluetoothState state);
-
-  void onDeviceStateChanged(BluetoothDevice device, BluetoothDeviceState state);
-}
-
-class BluetoothCallback with BluetoothCallbackMixin {
-  final _OnAdapterStateChanged _onAdapterStateChanged;
-  final _OnDeviceStateChanged _onDeviceStateChanged;
-
-  const BluetoothCallback({
-    _OnAdapterStateChanged onAdapterStateChanged,
-    _OnDeviceStateChanged onDeviceStateChanged,
-  })  : _onAdapterStateChanged = onAdapterStateChanged,
-        _onDeviceStateChanged = onDeviceStateChanged;
-
+  static const int _MASK = 0x20;
+  static const AdapterState NONE = AdapterState._(0, 'None');
+  static const AdapterState DISABLED = AdapterState._(0x1, 'Disabled');
+  static const AdapterState ENABLED = AdapterState._(0x2, 'Enabled');
+  static const AdapterState DISCOVERY_OFF = AdapterState._(0x3, 'Discovery off');
+  static const AdapterState DISCOVERY_ON = AdapterState._(0x4, 'Discovery on');
+  static const AdapterState TURNING_ON = AdapterState._(0x5, 'Turning on');
+  static const AdapterState TURNING_OFF = AdapterState._(0x6, 'Turning off');
+  static List<AdapterState> get values => [
+        NONE,
+        DISABLED,
+        ENABLED,
+        DISCOVERY_OFF,
+        DISCOVERY_ON,
+        TURNING_ON,
+        TURNING_OFF,
+      ];
+  /*    
   @override
-  void onAdapterStateChanged(BluetoothState state) {
-    _onAdapterStateChanged?.call(state);
+  bool operator ==(dynamic other) {
+    if (other.runtimeType != runtimeType) return false;
+    return other._value == _value;
   }
 
   @override
-  void onDeviceStateChanged(
-      BluetoothDevice device, BluetoothDeviceState state) {
-    _onDeviceStateChanged?.call(device, state);
+  int get hashCode => hashValues(_value, _name);
+  */
+  @override
+  String toString() => 'AdapterState.$_name';
+}
+
+class DeviceState {
+  final int _value;
+  final String _name;
+  const DeviceState._(this._value, this._name);
+  factory DeviceState._wrap(int value) =>
+      value == null ? NONE : values[value & ~_MASK];
+
+  static bool _isDeviceState(int value) =>
+      (value & DeviceState._MASK) == DeviceState._MASK;
+
+  static const int _MASK = 0x10;
+  static const DeviceState NONE = DeviceState._(0x0, 'None');
+  static const DeviceState FOUND = DeviceState._(0x1, 'Found');
+  static const DeviceState REMOVE = DeviceState._(0x2, 'Remove');
+  static const DeviceState UNPAIRED = DeviceState._(0x3, 'Unpaired');
+  static const DeviceState UNPAIRING = DeviceState._(0x4, 'Unpairing');
+  static const DeviceState PAIRING = DeviceState._(0x5, 'Pairing');
+  static const DeviceState PAIRED = DeviceState._(0x6, 'Paired');
+  static const DeviceState DISCONNECTED = DeviceState._(0x7, 'Disconnected');
+  static const DeviceState DISCONNECTING = DeviceState._(0x8, 'Disconnecting');
+  static const DeviceState CONNECTING = DeviceState._(0x9, 'Connecting');
+  static const DeviceState CONNECTED = DeviceState._(0xa, 'Connected');
+  static List<DeviceState> get values => [
+        NONE,
+        FOUND,
+        REMOVE,
+        UNPAIRED,
+        UNPAIRING,
+        PAIRING,
+        PAIRED,
+        DISCONNECTED,
+        DISCONNECTING,
+        CONNECTING,
+        CONNECTED,
+      ];
+  /*
+  @override
+  bool operator ==(dynamic other) {
+    if (other.runtimeType != runtimeType) return false;
+    return other._value == _value;
   }
+
+  @override
+  int get hashCode => hashValues(_value, _name);
+  */
+  @override
+  String toString() => 'DeviceState.$_name';
+}
+
+class DeviceCategory {
+  final int _value;
+
+  int get index => _value;
+
+  const DeviceCategory._(this._value);
+
+  factory DeviceCategory.byName(String name) {
+    final int index = names.indexOf(name);
+    if (index < 0) throw ArgumentError.value(name);
+    return values[index];
+  }
+
+  static const ProController = const DeviceCategory._(0);
+  static const JoyCon_L = const DeviceCategory._(1);
+  static const JoyCon_R = const DeviceCategory._(2);
+  static const JoyCon_Dual = const DeviceCategory._(3);
+  static const values = [ProController, JoyCon_L, JoyCon_R, JoyCon_Dual];
+  static const names = ['Pro Controller', 'Joy-Con (L)', 'Joy-Con (R)', 'TBD'];
+
+  @override
+  String toString() => names[_value];
 }
 
 class BluetoothDevice {
+  final String key;
   final String name;
   final String address;
+  final DeviceState state;
 
-  const BluetoothDevice({this.name, this.address});
+  const BluetoothDevice._(
+      {@required this.key,
+      @required this.name,
+      @required this.address,
+      this.state})
+      : assert(key != null),
+        assert(name != null),
+        assert(address != null);
 
   factory BluetoothDevice.fromMap(Map<dynamic, dynamic> data) {
-    return BluetoothDevice(name: data["name"], address: data["address"]);
+    print("create form map $data");
+    int state = data['state'];
+    return BluetoothDevice._(
+      key: data['key'],
+      name: data['name'],
+      address: data['address'],
+      state: DeviceState._wrap(state),
+    );
   }
+
+  factory BluetoothDevice.test(String name, String address) {
+    return BluetoothDevice._(key: 'test_key', name: name, address: address);
+  }
+
+  DeviceCategory get category => DeviceCategory.byName(name);
 
   @override
   bool operator ==(dynamic other) {
@@ -78,224 +251,35 @@ class BluetoothDevice {
   int get hashCode => hashValues(name, address);
 
   @override
-  String toString() => 'BluetoothDevice:{$name, $address}';
-
-  Map<String, dynamic> toMap() => {'name': name, 'address': address};
+  String toString() => '{$name, $address, $state}';
 }
 
-class Bluetooth {
-  // none
-  static const int _STATE_NONE = 0;
+typedef OnAdapterStateChanged = void Function(AdapterState);
+typedef OnDeviceStateChanged = void Function(BluetoothDevice, DeviceState);
 
-  // adapter state
-  static const int _STATE_OFF = 10;
-  static const int _STATE_TURNING_ON = 11;
-  static const int _STATE_ON = 12;
-  static const int _STATE_TURNING_OFF = 13;
-  static const int _STATE_DISCOVERY_OFF = 14;
-  static const int _STATE_DISCOVERY_ON = 15;
+mixin BluetoothCallbackMixin {
+  void onAdapterStateChanged(AdapterState state);
 
-  // device mask
-  static const int _STATE_DEVICE_MASK = 0x10;
+  void onDeviceStateChanged(BluetoothDevice device, DeviceState state);
+}
 
-  // device connect state
-  static const int _STATE_DISCONNECTED = 0;
-  static const int _STATE_CONNECTING = 1;
-  static const int _STATE_CONNECTED = 2;
-  static const int _STATE_DISCONNECTING = 3;
+class BluetoothCallback with BluetoothCallbackMixin {
+  final OnAdapterStateChanged _onAdapterStateChanged;
+  final OnDeviceStateChanged _onDeviceStateChanged;
 
-  // device found
-  static const int _STATE_FOUND_DEVICE = 4;
+  const BluetoothCallback({
+    OnAdapterStateChanged onAdapterStateChanged,
+    OnDeviceStateChanged onDeviceStateChanged,
+  })  : _onAdapterStateChanged = onAdapterStateChanged,
+        _onDeviceStateChanged = onDeviceStateChanged;
 
-  // device bond state
-  static const int _STATE_UNBOND = 10;
-  static const int _STATE_BONDING = 11;
-  static const int _STATE_BONDED = 12;
-  static const String _ROOT = 'com.mumumusuc.libjoycon';
-  static const String _CHAN_BT = '$_ROOT/bluetooth';
-  static const String _CHAN_BT_STATE = '$_ROOT/bluetooth/state';
-  static final Bluetooth _instance = Bluetooth._();
-
-  final MethodChannel _mc_bt = const MethodChannel(_CHAN_BT);
-  final BasicMessageChannel<dynamic> _mc_bt_state =
-      const BasicMessageChannel(_CHAN_BT_STATE, const StandardMessageCodec());
-  final Set<BluetoothCallbackMixin> callbacks = Set();
-
-  int state = _STATE_NONE;
-
-  Bluetooth._() {
-    _mc_bt_state.setMessageHandler(handler);
+  @override
+  void onAdapterStateChanged(AdapterState state) {
+    _onAdapterStateChanged?.call(state);
   }
 
-  factory Bluetooth() => _instance;
-
-  void addListener(BluetoothCallbackMixin cb) {
-    if (cb == null) return;
-    callbacks.add(cb);
+  @override
+  void onDeviceStateChanged(BluetoothDevice device, DeviceState state) {
+    _onDeviceStateChanged?.call(device, state);
   }
-
-  void removeListener(BluetoothCallbackMixin cb) {
-    if (cb == null) return;
-    callbacks.remove(cb);
-  }
-
-  Future<dynamic> handler(dynamic msg) async {
-    if (callbacks.isEmpty) return null;
-    if (msg is Map) {
-      int state = msg['state'];
-      print('bt state = $state');
-      if ((state & _STATE_DEVICE_MASK) == 0) {
-        callbacks.forEach(
-            (it) => it.onAdapterStateChanged(_parseAdapterState(state)));
-      } else {
-        state = state & (~_STATE_DEVICE_MASK);
-        final BluetoothDevice device = BluetoothDevice.fromMap(msg);
-        switch (state) {
-          case _STATE_DISCONNECTED:
-            final BluetoothDeviceState _state = await getDeviceState(device);
-            callbacks.forEach((it) => it.onDeviceStateChanged(device, _state));
-            break;
-          case _STATE_UNBOND:
-          case _STATE_BONDING:
-          case _STATE_BONDED:
-            if (this.state == _STATE_DISCONNECTED ||
-                this.state == _STATE_NONE) {
-              callbacks.forEach((it) =>
-                  it.onDeviceStateChanged(device, _parseDeviceState(state)));
-            }
-            break;
-          default:
-            callbacks.forEach((it) =>
-                it.onDeviceStateChanged(device, _parseDeviceState(state)));
-            break;
-        }
-      }
-      this.state = state;
-    }
-    return null;
-  }
-
-  void enable(bool on) {
-    _mc_bt.invokeMethod('enable', {'on': on});
-  }
-
-  void discovery(bool on) {
-    _mc_bt.invokeMethod('discovery', {'on': on}).catchError((e) {
-      Fluttertoast.showToast(
-        msg: e.message,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIos: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    });
-  }
-
-  void pair(BluetoothDevice dev) {
-    _mc_bt.invokeMethod('pair', {'address': dev.address});
-  }
-
-  void connect(BluetoothDevice dev, bool on) {
-    _mc_bt.invokeMethod('connect', {'address': dev.address, 'on': on});
-  }
-
-  Future<BluetoothState> getAdapterState() {
-    return _mc_bt
-        .invokeMethod('getAdapterState')
-        .then((value) => _parseAdapterState(value));
-  }
-
-  Future<BluetoothDeviceState> getDeviceState(BluetoothDevice dev) {
-    return _mc_bt.invokeMethod('getDeviceState', {'address': dev.address}).then(
-        (value) => _parseDeviceState(value, mask: true));
-  }
-
-  Future<Set<BluetoothDevice>> getPairedDevices() {
-    return _mc_bt
-        .invokeMethod<List<dynamic>>('getPairedDevices')
-        .then<Set<BluetoothDevice>>((data) {
-      return data.map((it) => BluetoothDevice.fromMap(it)).toSet();
-    });
-  }
-
-  Future<Set<BluetoothDevice>> getConnectedDevices() {
-    return _mc_bt
-        .invokeMethod<List<dynamic>>('getConnectedDevices')
-        .then<Set<BluetoothDevice>>((data) {
-      return data.map((it) => BluetoothDevice.fromMap(it)).toSet();
-    });
-  }
-
-  static BluetoothState _parseAdapterState(int state) {
-    switch (state) {
-      case _STATE_OFF:
-        return BluetoothState.DISABLED;
-      case _STATE_TURNING_ON:
-        return BluetoothState.TURNING_ON;
-      case _STATE_ON:
-        return BluetoothState.ENABLED;
-      case _STATE_TURNING_OFF:
-        return BluetoothState.TURNING_OFF;
-      case _STATE_DISCOVERY_OFF:
-        return BluetoothState.DISCOVER_OFF;
-      case _STATE_DISCOVERY_ON:
-        return BluetoothState.DISCOVER_ON;
-      default:
-        throw FormatException('unkown adapter state : $state');
-    }
-  }
-
-  static BluetoothDeviceState _parseDeviceState(int state,
-      {bool mask = false}) {
-    if (mask) state = state & (~_STATE_DEVICE_MASK);
-    switch (state) {
-      case _STATE_DISCONNECTED:
-        return BluetoothDeviceState.DISCONNECTED;
-      case _STATE_CONNECTING:
-        return BluetoothDeviceState.CONNECTING;
-      case _STATE_CONNECTED:
-        return BluetoothDeviceState.CONNECTED;
-      case _STATE_DISCONNECTING:
-        return BluetoothDeviceState.DISCONNECTING;
-      case _STATE_FOUND_DEVICE:
-        return BluetoothDeviceState.FOUND;
-      case _STATE_UNBOND:
-        return BluetoothDeviceState.UNPAIRED;
-      case _STATE_BONDING:
-        return BluetoothDeviceState.PAIRING;
-      case _STATE_BONDED:
-        return BluetoothDeviceState.PAIRED;
-      default:
-        throw FormatException('unkown adapter state : $state');
-    }
-  }
-
-/*
-  static dynamic _remote2LocalState(int state) {
-    return _local_states[_remote_states.indexOf(state)];
-  }
-
-  static int _local2remoteState(dynamic state) {
-    return _remote_states[_local_states.indexOf(state)];
-  }
-
-  // test
-  void testBluetoothAdapter(BluetoothState state) {
-    handler({'state': _local2remoteState(state)});
-  }
-
-  void testBluetoothDevice(BluetoothDevice device, BluetoothDeviceState state) {
-    handler({
-      'name': device?.name,
-      'address': device?.address,
-      'state': _local2remoteState(state)
-    });
-  }
-
-  Future<BluetoothDeviceState> testGetDeviceState(
-      BluetoothDevice device, BluetoothDeviceState expect) {
-    return Future(() => expect);
-  }
-   */
 }

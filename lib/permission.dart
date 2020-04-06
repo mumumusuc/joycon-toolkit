@@ -1,166 +1,318 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:android_intent/android_intent.dart';
+import 'generated/i18n.dart';
+import 'widgets/expand.dart';
+import 'dart:io';
 
-typedef bool Check();
+const String _permissionUrl =
+    'https://developer.android.google.cn/guide/topics/connectivity/bluetooth?hl=en#Permissions';
+const String _locationUrl =
+    'http://aospxref.com/android-10.0.0_r2/xref/packages/apps/Bluetooth/src/com/android/bluetooth/btservice/AdapterService.java#1944';
+const MethodChannel _versionChannel =
+    const MethodChannel('com.mumumusuc.libjoycon/version');
+final EventChannel _locationEvent = Platform.isAndroid
+    ? const EventChannel('com.mumumusuc.libjoycon/location/state')
+    : null;
 
-class Permission extends StatelessWidget {
-  static const EdgeInsets _cardMargin =
-      const EdgeInsets.symmetric(vertical: 4, horizontal: 4);
+Future<bool> _isAndroidQ() async {
+  if (!Platform.isAndroid) return false;
+  return _versionChannel
+      .invokeMethod('isAndroidQ')
+      .then((value) => value as bool);
+}
+
+Future<PermissionStatus> _getLocationPermissionStatus() {
+  return _isAndroidQ().then((Q) {
+    if (!Q) return PermissionStatus.granted;
+    return PermissionHandler().checkPermissionStatus(PermissionGroup.location);
+  });
+}
+
+Future<PermissionStatus> _requestLocationPermission() {
+  return _isAndroidQ().then((Q) {
+    if (!Q) return PermissionStatus.granted;
+    final PermissionHandler lp = PermissionHandler();
+    return lp
+        .shouldShowRequestPermissionRationale(PermissionGroup.location)
+        .then((value) {
+      if (value)
+        return lp.openAppSettings().then((value) => PermissionStatus.unknown);
+      else
+        return lp.requestPermissions([PermissionGroup.location]).then((value) {
+          return value[PermissionGroup.location];
+        });
+    });
+  });
+}
+
+Future<ServiceStatus> _getLocationServiceStatus() {
+  return _isAndroidQ().then((Q) {
+    if (!Q) return ServiceStatus.enabled;
+    return PermissionHandler().checkServiceStatus(PermissionGroup.location);
+  });
+}
+
+Future<ServiceStatus> _requestLocationService() async {
+  if (Platform.isAndroid) {
+    AndroidIntent(action: 'action_location_source_settings').launch();
+  }
+  return ServiceStatus.unknown;
+}
+
+Stream<ServiceStatus> get _serviceStatus =>
+    _locationEvent?.receiveBroadcastStream()?.map((dynamic status) {
+      return status ? ServiceStatus.enabled : ServiceStatus.disabled;
+    });
+
+class _PermissionStatus extends ChangeNotifier
+    implements ValueListenable<bool> {
+  PermissionStatus _status;
+  bool _ignore;
+
+  _PermissionStatus({
+    PermissionStatus status = PermissionStatus.unknown,
+    bool ignore = false,
+  })  : _status = status,
+        _ignore = ignore;
+
+  bool get abnormal => _status != PermissionStatus.granted;
+
+  bool get value => abnormal && !_ignore;
+
+  set ignore(bool value) {
+    if (_ignore != value) {
+      _ignore = value;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> update() {
+    return _getLocationPermissionStatus().then((value) {
+      if (value != _status) {
+        _status = value;
+        notifyListeners();
+      }
+      return abnormal;
+    });
+  }
+
+  void request() {
+    _requestLocationPermission().then((value) {
+      if (value != _status) {
+        _status = value;
+        notifyListeners();
+      }
+    });
+  }
+}
+
+class _ServiceStatus extends ChangeNotifier implements ValueListenable<bool> {
+  ServiceStatus _status;
+  bool _ignore;
+
+  _ServiceStatus({
+    ServiceStatus status = ServiceStatus.unknown,
+    bool ignore = false,
+  }) {
+    _status = status;
+    _ignore = ignore;
+    _serviceStatus?.listen((event) {
+      if (_status != event) {
+        _status = event;
+        notifyListeners();
+      }
+    });
+  }
+
+  bool get abnormal => _status != ServiceStatus.enabled;
+
+  bool get value => abnormal && !_ignore;
+
+  set ignore(bool value) {
+    if (_ignore != value) {
+      _ignore = value;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> update() {
+    return _getLocationServiceStatus().then((value) {
+      if (value != _status) {
+        _status = value;
+        notifyListeners();
+      }
+      return abnormal;
+    });
+  }
+
+  void request() => _requestLocationService();
+}
+
+typedef ContainerBuilder = Widget Function(Widget);
+
+abstract class PermissionState<T extends StatefulWidget> extends State<T>
+    with WidgetsBindingObserver {
+  final _PermissionStatus _permission = _PermissionStatus();
+  final _ServiceStatus _service = _ServiceStatus();
+
+  void ignorePermission(bool ignore) => _permission.ignore = ignore;
+
+  void ignoreService(bool ignore) => _service.ignore = ignore;
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(
-        child: ListView(
-          shrinkWrap: true,
-          children: <Widget>[
-            _buildOpenBluetoothCard(context),
-            _buildPermissionCard(context),
-            _buildOpenLocationCard(context),
-          ],
-        ),
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _permission.update();
+      _service.update();
+    }
+  }
+
+  void initState() {
+    super.initState();
+    _permission.update();
+    _service.update();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+    _permission.dispose();
+    _service.dispose();
+  }
+
+  Future<bool> isPermissionReady({bool showBanner = false}) =>
+      _isAndroidQ().then((Q) {
+        if (!Q) return true;
+        return Future.wait([_permission.update(), _service.update()]).then(
+          (values) {
+            if (values[0] && showBanner) {
+              _permission.ignore = false;
+            }
+            if (values[1] && showBanner) {
+              _service.ignore = false;
+            }
+            return !values[0] && !values[1];
+          },
+        );
+      });
+
+  Widget buildPermissionBanner({ContainerBuilder container}) {
+    return ValueListenableProvider.value(
+      value: _permission,
+      child: Consumer<bool>(
+        child: container?.call(_permissionBanner) ?? _permissionBanner,
+        builder: (context, abnormal, child) {
+          return ExpandWidget(
+            expand: abnormal,
+            child: child,
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCard(Widget leading, Widget title, Widget child, Check check,
-      String label, VoidCallback onPressed) {
-    final bool ok = check();
-    return Card(
-      clipBehavior: Clip.hardEdge,
-      margin: _cardMargin,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ExpansionTile(
-            backgroundColor: Colors.transparent,
-            leading: leading,
-            title: title,
-            trailing: Icon(Icons.help),
-            children: <Widget>[
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-                alignment: Alignment.center,
-                height: 100,
-                child: child,
-              ),
-            ],
-          ),
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(left: 8, right: 8, bottom: 4, top: 4),
-            child: RaisedButton(
-              child: ok ? Icon(Icons.check) : Text(label.toUpperCase()),
-              elevation: 0,
-              disabledColor: Colors.lightGreen,
-              onPressed: ok ? null : onPressed,
-            ),
-          ),
-        ],
+  Widget buildServiceBanner({ContainerBuilder container}) {
+    return ValueListenableProvider.value(
+      value: _service,
+      child: Consumer<bool>(
+        child: container?.call(_serviceBanner) ?? _serviceBanner,
+        builder: (context, abnormal, child) {
+          return ExpandWidget(
+            expand: abnormal,
+            child: child,
+          );
+        },
       ),
     );
   }
 
-  Widget _buildOpenBluetoothCard(BuildContext context) {
-    return _buildCard(
-      Icon(Icons.bluetooth),
-      Text("open bluetooth"),
-      Text.rich(
-        TextSpan(text: "Obviously..."),
-        style: Theme.of(context).textTheme.bodyText1,
-      ),
-      () => false,
-      'enable',
-      () {},
-    );
-  }
+  TextStyle get hyperLinkTextStyle => const TextStyle(
+        fontStyle: FontStyle.italic,
+        color: Colors.blue,
+        decoration: TextDecoration.underline,
+      );
 
-  Widget _buildPermissionCard(BuildContext context) {
-    return _buildCard(
-      Icon(Icons.add_location),
-      Text("location permission"),
-      Text.rich(
+  Widget get _permissionBanner {
+    return MaterialBanner(
+      leading: const CircleAvatar(
+        child: const Icon(Icons.launch),
+      ),
+      leadingPadding: const EdgeInsets.only(
+        right: 16,
+        top: 16,
+        bottom: 16,
+      ),
+      content: Text.rich(
         TextSpan(
-          text: "Android need permission",
+          text: S.of(context).perm_permission_1,
           children: [
             TextSpan(
-                text: " ACCESS_FINE_LOCATION ",
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyText1
-                    .copyWith(fontStyle: FontStyle.italic, color: Colors.blue)),
-            TextSpan(
-              text:
-                  "to access bluetooth operations.\n\nFor more details, please visit ",
-            ),
-            TextSpan(
-              text: "Google's document",
-              recognizer: TapGestureRecognizer()
-                ..onTap = () async {
-                  const url =
-                      'https://developer.android.google.cn/guide/topics/connectivity/bluetooth.html#Permissions';
-                  if (await canLaunch(url))
-                    await launch(url);
-                  else
-                    throw 'cound not launch $url';
-                },
-              style: Theme.of(context).textTheme.bodyText1.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline),
-            ),
+                text: 'ACCESS_FINE_LOCATION',
+                style: hyperLinkTextStyle,
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () async {
+                    if (await canLaunch(_permissionUrl)) launch(_permissionUrl);
+                  }),
+            TextSpan(text: S.of(context).perm_permission_2),
           ],
         ),
-        style: Theme.of(context).textTheme.bodyText1,
       ),
-      () => false,
-      'acquire',
-      () => PermissionHandler().requestPermissions(
-          [PermissionGroup.locationWhenInUse]).then((permissions) {
-        print(permissions[PermissionGroup.locationWhenInUse]);
-        if (permissions[PermissionGroup.locationWhenInUse] ==
-            PermissionStatus.granted) {
-          Navigator.pop(context);
-        }
-      }),
+      actions: [
+        FlatButton(
+          child: Text(S.of(context).action_ok),
+          onPressed: _permission.request,
+        ),
+        FlatButton(
+          child: Text(S.of(context).action_dismiss),
+          onPressed: () => ignorePermission(true),
+        ),
+      ],
     );
   }
 
-  Widget _buildOpenLocationCard(BuildContext context) {
-    return _buildCard(
-      Icon(Icons.location_on),
-      Text("open location"),
-      Text.rich(
+  Widget get _serviceBanner {
+    return MaterialBanner(
+      leading: const CircleAvatar(
+        child: const Icon(Icons.location_on),
+      ),
+      leadingPadding: const EdgeInsets.only(
+        right: 16,
+        top: 16,
+        bottom: 16,
+      ),
+      content: Text.rich(
         TextSpan(
-          text:
-              "Android require location opened when access bluetooth operations.\n\nFor more details, please visit ",
+          text: S.of(context).perm_service_1,
           children: [
             TextSpan(
-              text: "Google's document",
+              text: S.of(context).perm_service_2,
+              style: hyperLinkTextStyle,
               recognizer: TapGestureRecognizer()
                 ..onTap = () async {
-                  const url =
-                      'https://developer.android.google.cn/guide/topics/connectivity/bluetooth.html#Permissions';
-                  if (await canLaunch(url))
-                    await launch(url);
-                  else
-                    throw 'cound not launch $url';
+                  if (await canLaunch(_locationUrl)) launch(_locationUrl);
                 },
-              style: Theme.of(context).textTheme.bodyText1.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline),
             ),
+            TextSpan(text: S.of(context).perm_service_3),
           ],
         ),
-        style: Theme.of(context).textTheme.bodyText1,
       ),
-      () => false,
-      'setting',
-      () {},
+      actions: [
+        FlatButton(
+          child: Text(S.of(context).action_ok),
+          onPressed: _service.request,
+        ),
+        FlatButton(
+          child: Text(S.of(context).action_dismiss),
+          onPressed: () => ignoreService(true),
+        ),
+      ],
     );
   }
 }
